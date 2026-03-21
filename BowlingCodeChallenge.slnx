@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="BowlingLogic/BowlingLogic.csproj" />
+  <Project Path="BowlingFrontend/BowlingFrontend.csproj" />
+</Solution>
