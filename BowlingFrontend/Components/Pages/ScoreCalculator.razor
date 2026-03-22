@@ -115,103 +115,33 @@ else
     }
 
     /// <summary>
-    /// Returns the display symbol for a given roll in a frame, using standard bowling notation.
-    /// Frames 1-9: strike is shown as empty first box, "X" in second box.
-    /// Frame 10: each roll displayed independently with pin-reset awareness.
+    /// Returns the text to display for a given roll in a frame.
     /// </summary>
     private string GetRollDisplay(int frameIndex, int rollIndex)
     {
         var frame = scoreCard.Frames[frameIndex];
-        bool isLastFrame = frameIndex == scoreCard.TotalFrames - 1;
 
         if (rollIndex >= frame.Rolls.Count)
             return "";
 
-        int pins = frame.Rolls[rollIndex];
+        int rolled = frame.Rolls[rollIndex];
 
-        if (!isLastFrame)
-            return GetStandardFrameRollDisplay(frame, rollIndex, pins);
-        else
-            return GetLastFrameRollDisplay(frame, rollIndex, pins);
-    }
-
-    /// <summary>
-    /// Roll display for frames 1-9.
-    /// Convention: strikes show as empty first box, "X" in the second box.
-    /// </summary>
-    private string GetStandardFrameRollDisplay(ScoreFrame frame, int rollIndex, int pins)
-    {
-        if (rollIndex == 0)
+        if (rolled == frame.PinCount)
         {
-            if (pins == frame.PinCount) return "";
-            return pins == 0 ? "-" : pins.ToString();
+            return "X";
+        }
+        else if (rollIndex == 1 && frame.Rolls[0] + rolled == frame.PinCount)
+        {
+            return "/";
+        }
+        else if(rolled == 0)
+        {
+            return "-";
         }
         else
         {
-            if (frame.Rolls[0] == frame.PinCount) return "X";
-            if (frame.Rolls[0] + pins == frame.PinCount) return "/";
-            return pins == 0 ? "-" : pins.ToString();
+            return rolled.ToString();
         }
-    }
-
-    /// <summary>
-    /// Roll display for the 10th frame, handling pin resets after strikes and spares.
-    /// </summary>
-    private string GetLastFrameRollDisplay(ScoreFrame frame, int rollIndex, int pins)
-    {
-        if (rollIndex == 0)
-        {
-            if (pins == frame.PinCount) return "X";
-            return pins == 0 ? "-" : pins.ToString();
-        }
-        else if (rollIndex == 1)
-        {
-            bool pinsWereReset = frame.Rolls[0] == frame.PinCount;
-            if (pinsWereReset)
-            {
-                if (pins == frame.PinCount) return "X";
-                return pins == 0 ? "-" : pins.ToString();
-            }
-            else
-            {
-                if (frame.Rolls[0] + pins == frame.PinCount) return "/";
-                return pins == 0 ? "-" : pins.ToString();
-            }
-        }
-        else
-        {
-            return GetLastFrameThirdRollDisplay(frame, pins);
-        }
-    }
-
-    private string GetLastFrameThirdRollDisplay(ScoreFrame frame, int pins)
-    {
-        bool roll1Strike = frame.Rolls[0] == frame.PinCount;
-        bool roll2Strike = frame.Rolls[1] == frame.PinCount;
-        bool firstTwoSpare = !roll1Strike && (frame.Rolls[0] + frame.Rolls[1] == frame.PinCount);
-
-        // After two strikes, roll 3 is on fresh pins
-        if (roll1Strike && roll2Strike)
-        {
-            if (pins == frame.PinCount) return "X";
-            return pins == 0 ? "-" : pins.ToString();
-        }
-
-        // Strike then non-strike: roll 3 finishes the second set of pins
-        if (roll1Strike && !roll2Strike)
-        {
-            if (frame.Rolls[1] + pins == frame.PinCount) return "/";
-            return pins == 0 ? "-" : pins.ToString();
-        }
-
-        // Spare: roll 3 is on fresh pins
-        if (firstTwoSpare)
-        {
-            if (pins == frame.PinCount) return "X";
-            return pins == 0 ? "-" : pins.ToString();
-        }
-
-        return pins.ToString();
     }
 
     /// <summary>
