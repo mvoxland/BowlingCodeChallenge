@@ -30,3 +30,6 @@ This is where all the logic for scoring a bowling game is held. To start scoring
 
 I made some use of AI to quickly refactor things as I was creating this portion, but it was very light and more a time saving measure than anything. All the architecture was designed by me, and all the implementation was written by me (or autofilled and then edited by me).
 
+BowlingLogic.Tests
+Ai generated tests for the BowlingLogic. From scratch in agentic mode with Claude Opus 4.6.
+
