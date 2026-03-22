@@ -239,4 +239,77 @@ public class EndScoreFrameTests
         frame.AddRoll(75);
         Assert.Equal(175, frame.GetRawScore());
     }
+
+    // ── Completion: No Rolls ──────────────────────────────────
+
+    [Fact]
+    public void IsComplete_NoRolls_False()
+    {
+        var frame = new EndScoreFrame();
+        Assert.False(frame.IsComplete);
+    }
+
+    // ── Strike Then Spare Pattern ─────────────────────────────
+
+    [Fact]
+    public void IsComplete_StrikeThenSpare_Complete()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10); // strike, pins reset
+        frame.AddRoll(3);
+        frame.AddRoll(7);  // spare (3+7=10)
+        Assert.True(frame.IsComplete);
+    }
+
+    [Fact]
+    public void AddRoll_StrikeThenSpare_RawScore20()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10); // strike
+        frame.AddRoll(3);
+        frame.AddRoll(7);  // spare
+        Assert.Equal(20, frame.GetRawScore());
+    }
+
+    // ── Double Strike Then Non-Strike ─────────────────────────
+
+    [Fact]
+    public void IsComplete_DoubleStrikeThenNonStrike_Complete()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10); // strike
+        frame.AddRoll(10); // strike
+        frame.AddRoll(5);
+        Assert.True(frame.IsComplete);
+    }
+
+    [Fact]
+    public void AddRoll_DoubleStrikeThenNonStrike_RawScore25()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10); // strike
+        frame.AddRoll(10); // strike
+        frame.AddRoll(5);
+        Assert.Equal(25, frame.GetRawScore());
+    }
+
+    // ── GetBonusRolls: Spare and Open Also Return 0 ───────────
+
+    [Fact]
+    public void GetBonusRolls_Spare_Returns0()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(6);
+        frame.AddRoll(4); // spare
+        Assert.Equal(0, frame.GetBonusRolls());
+    }
+
+    [Fact]
+    public void GetBonusRolls_Open_Returns0()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(3);
+        frame.AddRoll(4); // open
+        Assert.Equal(0, frame.GetBonusRolls());
+    }
 }

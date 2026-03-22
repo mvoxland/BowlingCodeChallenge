@@ -222,4 +222,36 @@ public class ScoreFrameTests
         Assert.Single(frame.Rolls);
         Assert.Equal(10, frame.Rolls[0]);
     }
+
+    // ── MaxRolls ──────────────────────────────────────────────
+
+    [Fact]
+    public void MaxRolls_IsAlways2()
+    {
+        var frame = new ScoreFrame();
+        Assert.Equal(2, frame.MaxRolls);
+        frame.AddRoll(3);
+        Assert.Equal(2, frame.MaxRolls);
+    }
+
+    // ── Partial / Edge Scoring ────────────────────────────────
+
+    [Fact]
+    public void GetRawScore_IncompleteFrame_ReturnsPartialSum()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(7);
+        Assert.Equal(7, frame.GetRawScore());
+    }
+
+    [Fact]
+    public void AddRoll_GutterThenHit_Allowed()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(0);
+        frame.AddRoll(7);
+        Assert.Equal([0, 7], frame.Rolls);
+        Assert.Equal(7, frame.GetRawScore());
+        Assert.True(frame.IsComplete);
+    }
 }

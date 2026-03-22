@@ -434,4 +434,495 @@ public class ScoreCardTests
         card.Roll(3);
         Assert.Null(card.GetFrameScore(card.Frames[0]));
     }
+
+    // ── GetScore / GetFrameScore with Foreign Frame ───────────
+
+    [Fact]
+    public void GetScore_ThroughFrame_NotInList_Throws()
+    {
+        var card = new ScoreCard();
+        var foreignFrame = new ScoreFrame();
+        Assert.Throws<ArgumentException>(() => card.GetScore(foreignFrame));
+    }
+
+    [Fact]
+    public void GetFrameScore_NotInList_Throws()
+    {
+        var card = new ScoreCard();
+        var foreignFrame = new ScoreFrame();
+        Assert.Throws<ArgumentException>(() => card.GetFrameScore(foreignFrame));
+    }
+
+    // ── Partial Running Total (no throughFrame) ───────────────
+
+    [Fact]
+    public void GetScore_NoParam_ReturnsPartialRunningTotal()
+    {
+        var card = new ScoreCard();
+        // Frame 0: open (3+4=7) -> scorable
+        card.Roll(3);
+        card.Roll(4);
+        // Frame 1: strike -> indeterminate (no subsequent rolls yet)
+        card.Roll(10);
+        // GetScore() without throughFrame should return 7 (partial total up to last scorable frame)
+        Assert.Equal(7, card.GetScore());
+        // But GetScore(throughFrame: Frames[1]) should return null because frame 1 is indeterminate
+        Assert.Null(card.GetScore(card.Frames[1]));
+    }
+
+    // ── Scoring Interactions ──────────────────────────────────
+
+    [Fact]
+    public void StrikeFollowedBySpare_ScoresCorrectly()
+    {
+        var card = new ScoreCard();
+        // Frame 1: strike (10), bonus = 6+4 = 10 -> frame score = 20
+        card.Roll(10);
+        // Frame 2: spare (6+4=10), bonus = next roll (5) -> frame score = 15
+        card.Roll(6);
+        card.Roll(4);
+        // Frame 3: open (5+2=7)
+        card.Roll(5);
+        card.Roll(2);
+        // Frames 4-10: all zeros
+        RollRepeated(card, 0, 14);
+
+        Assert.Equal(20, card.GetFrameScore(card.Frames[0]));
+        Assert.Equal(15, card.GetFrameScore(card.Frames[1]));
+        Assert.Equal(7, card.GetFrameScore(card.Frames[2]));
+        Assert.Equal(42, card.GetScore());
+    }
+
+    [Fact]
+    public void ThreeConsecutiveStrikes_ScoresCorrectly()
+    {
+        var card = new ScoreCard();
+        // Frame 1: strike, bonus = 10+10 = 20 -> frame score = 30
+        card.Roll(10);
+        // Frame 2: strike, bonus = 10+3 = 13 -> frame score = 23
+        card.Roll(10);
+        // Frame 3: strike, bonus = 3+4 = 7 -> frame score = 17
+        card.Roll(10);
+        // Frame 4: open (3+4=7)
+        card.Roll(3);
+        card.Roll(4);
+        // Frames 5-10: all zeros
+        RollRepeated(card, 0, 12);
+
+        Assert.Equal(30, card.GetFrameScore(card.Frames[0]));
+        Assert.Equal(23, card.GetFrameScore(card.Frames[1]));
+        Assert.Equal(17, card.GetFrameScore(card.Frames[2]));
+        Assert.Equal(7, card.GetFrameScore(card.Frames[3]));
+        Assert.Equal(77, card.GetScore());
+    }
+
+    [Fact]
+    public void SpareInFrame9_BonusFromFrame10()
+    {
+        var card = new ScoreCard();
+        // Frames 1-8: all zeros
+        RollRepeated(card, 0, 16);
+        // Frame 9: spare (7+3=10), bonus = next roll from frame 10 (6) -> frame score = 16
+        card.Roll(7);
+        card.Roll(3);
+        // Frame 10: open (6+2=8)
+        card.Roll(6);
+        card.Roll(2);
+
+        Assert.Equal(16, card.GetFrameScore(card.Frames[8]));
+        Assert.Equal(8, card.GetFrameScore(card.Frames[9]));
+        Assert.Equal(24, card.GetScore());
+        Assert.True(card.IsGameComplete());
+    }
+
+    [Fact]
+    public void StrikeInFrame9_BonusFromFrame10()
+    {
+        var card = new ScoreCard();
+        // Frames 1-8: all zeros
+        RollRepeated(card, 0, 16);
+        // Frame 9: strike (10), bonus = next 2 rolls from frame 10 (8+1=9) -> frame score = 19
+        card.Roll(10);
+        // Frame 10: open (8+1=9)
+        card.Roll(8);
+        card.Roll(1);
+
+        Assert.Equal(19, card.GetFrameScore(card.Frames[8]));
+        Assert.Equal(9, card.GetFrameScore(card.Frames[9]));
+        Assert.Equal(28, card.GetScore());
+        Assert.True(card.IsGameComplete());
+    }
+
+    [Fact]
+    public void TenthFrame_StrikeThenSpare()
+    {
+        var card = new ScoreCard();
+        // Frames 1-9: all zeros
+        RollRepeated(card, 0, 18);
+        // Frame 10: strike, then spare (10 + 3 + 7 = 20)
+        card.Roll(10);
+        card.Roll(3);
+        card.Roll(7);
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(20, card.GetScore());
+    }
+
+    [Fact]
+    public void TenthFrame_DoubleStrikeThenNonStrike()
+    {
+        var card = new ScoreCard();
+        // Frames 1-9: all zeros
+        RollRepeated(card, 0, 18);
+        // Frame 10: strike, strike, 5 (10 + 10 + 5 = 25)
+        card.Roll(10);
+        card.Roll(10);
+        card.Roll(5);
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(25, card.GetScore());
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Full Game Walk-Throughs with Per-Frame Assertions
+    // ══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Mixed game: strikes, spares, opens, and gutters in varied positions.
+    /// Verifies GetFrameScore, GetScore(throughFrame), and null for indeterminate frames along the way.
+    /// 
+    /// Frame  1: 8, 1       = 9    (open)          cumulative:   9
+    /// Frame  2: 10         = 20   (strike: 10+6+4) cumulative:  29
+    /// Frame  3: 6, 4       = 15   (spare: 10+5)   cumulative:  44
+    /// Frame  4: 5, 3       = 8    (open)           cumulative:  52
+    /// Frame  5: 10         = 20   (strike: 10+10+0) cumulative: 72
+    /// Frame  6: 10         = 10   (strike: 10+0+0) cumulative:  82
+    /// Frame  7: 0, 0       = 0    (gutter)         cumulative:  82
+    /// Frame  8: 3, 7       = 20   (spare: 10+10)   cumulative: 102
+    /// Frame  9: 10         = 20   (strike: 10+7+3) cumulative: 122
+    /// Frame 10: 7, 3, 9    = 19   (spare+bonus)    cumulative: 141
+    /// </summary>
+    [Fact]
+    public void FullGame_Mixed_WithPerFrameAssertions()
+    {
+        var card = new ScoreCard();
+
+        // -- Frame 1: 8, 1 (open) --
+        card.Roll(8);
+        Assert.Null(card.GetFrameScore(card.Frames[0])); // incomplete
+        card.Roll(1);
+        Assert.Equal(9, card.GetFrameScore(card.Frames[0]));
+        Assert.Equal(9, card.GetScore(card.Frames[0]));
+
+        // -- Frame 2: strike --
+        card.Roll(10);
+        Assert.Null(card.GetFrameScore(card.Frames[1])); // strike, no subsequent rolls yet
+        Assert.Null(card.GetScore(card.Frames[1]));       // indeterminate through frame 1
+        Assert.Equal(9, card.GetScore());                  // partial running total = frame 0 only
+
+        // -- Frame 3: 6, 4 (spare) --
+        card.Roll(6);
+        Assert.Null(card.GetFrameScore(card.Frames[1])); // strike still needs 1 more roll
+        card.Roll(4);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[1])); // 10 + 6 + 4 = 20
+        Assert.Null(card.GetFrameScore(card.Frames[2]));      // spare, needs next roll
+
+        // -- Frame 4: 5, 3 (open) --
+        card.Roll(5);
+        Assert.Equal(15, card.GetFrameScore(card.Frames[2])); // 10 + 5 = 15
+        card.Roll(3);
+        Assert.Equal(8, card.GetFrameScore(card.Frames[3]));
+        Assert.Equal(9, card.GetScore(card.Frames[0]));
+        Assert.Equal(29, card.GetScore(card.Frames[1]));
+        Assert.Equal(44, card.GetScore(card.Frames[2]));
+        Assert.Equal(52, card.GetScore(card.Frames[3]));
+
+        // -- Frame 5: strike --
+        card.Roll(10);
+        Assert.Null(card.GetFrameScore(card.Frames[4]));
+
+        // -- Frame 6: strike --
+        card.Roll(10);
+        Assert.Null(card.GetFrameScore(card.Frames[4])); // still needs 1 more after frame 6's first roll
+        Assert.Null(card.GetFrameScore(card.Frames[5])); // needs 2 more
+
+        // -- Frame 7: 0, 0 (gutter frame) --
+        card.Roll(0);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[4])); // 10 + 10 + 0 = 20
+        Assert.Null(card.GetFrameScore(card.Frames[5]));      // still needs 1 more roll
+        card.Roll(0);
+        Assert.Equal(10, card.GetFrameScore(card.Frames[5])); // 10 + 0 + 0 = 10
+        Assert.Equal(0, card.GetFrameScore(card.Frames[6]));
+        Assert.Equal(72, card.GetScore(card.Frames[4]));
+        Assert.Equal(82, card.GetScore(card.Frames[5]));
+        Assert.Equal(82, card.GetScore(card.Frames[6]));
+
+        // -- Frame 8: 3, 7 (spare) --
+        card.Roll(3);
+        card.Roll(7);
+        Assert.Null(card.GetFrameScore(card.Frames[7])); // spare, needs next roll
+
+        // -- Frame 9: strike --
+        card.Roll(10);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[7])); // 10 + 10 = 20
+        Assert.Null(card.GetFrameScore(card.Frames[8]));       // strike, needs 2 more
+
+        // -- Frame 10: 7, 3, 9 (spare + bonus) --
+        card.Roll(7);
+        Assert.Null(card.GetFrameScore(card.Frames[8])); // still needs 1 more
+        card.Roll(3);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[8])); // 10 + 7 + 3 = 20
+        Assert.Null(card.GetFrameScore(card.Frames[9]));       // spare in 10th, needs bonus
+        card.Roll(9);
+        Assert.Equal(19, card.GetFrameScore(card.Frames[9])); // 7 + 3 + 9 = 19
+
+        // -- Final cumulative assertions --
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(9, card.GetScore(card.Frames[0]));
+        Assert.Equal(29, card.GetScore(card.Frames[1]));
+        Assert.Equal(44, card.GetScore(card.Frames[2]));
+        Assert.Equal(52, card.GetScore(card.Frames[3]));
+        Assert.Equal(72, card.GetScore(card.Frames[4]));
+        Assert.Equal(82, card.GetScore(card.Frames[5]));
+        Assert.Equal(82, card.GetScore(card.Frames[6]));
+        Assert.Equal(102, card.GetScore(card.Frames[7]));
+        Assert.Equal(122, card.GetScore(card.Frames[8]));
+        Assert.Equal(141, card.GetScore(card.Frames[9]));
+        Assert.Equal(141, card.GetScore());
+    }
+
+    /// <summary>
+    /// Streaky game: hot start with 4 strikes, cools off with opens, finishes with a spare in the 10th.
+    /// 
+    /// Frame  1: 10         = 30   (strike: 10+10+10) cumulative:  30
+    /// Frame  2: 10         = 30   (strike: 10+10+10) cumulative:  60
+    /// Frame  3: 10         = 23   (strike: 10+10+3)  cumulative:  83
+    /// Frame  4: 10         = 14   (strike: 10+3+1)   cumulative:  97
+    /// Frame  5: 3, 1       = 4    (open)             cumulative: 101
+    /// Frame  6: 0, 5       = 5    (open)             cumulative: 106
+    /// Frame  7: 2, 3       = 5    (open)             cumulative: 111
+    /// Frame  8: 4, 4       = 8    (open)             cumulative: 119
+    /// Frame  9: 1, 0       = 1    (open)             cumulative: 120
+    /// Frame 10: 6, 4, 10   = 20   (spare+bonus)      cumulative: 140
+    /// </summary>
+    [Fact]
+    public void FullGame_StreakyHotStart_WithPerFrameAssertions()
+    {
+        var card = new ScoreCard();
+
+        // -- Frames 1-4: four strikes --
+        card.Roll(10);
+        card.Roll(10);
+        card.Roll(10);
+        card.Roll(10);
+
+        // After 4 strikes: frames 0-1 have enough subsequent rolls to score, frames 2-3 do not
+        Assert.Equal(30, card.GetFrameScore(card.Frames[0])); // 10+10+10
+        Assert.Equal(30, card.GetFrameScore(card.Frames[1])); // 10+10+10
+        Assert.Null(card.GetFrameScore(card.Frames[2]));       // needs 1 more subsequent roll
+        Assert.Null(card.GetFrameScore(card.Frames[3]));       // needs 2 more subsequent rolls
+
+        // -- Frame 5: 3, 1 (open) --
+        card.Roll(3);
+        Assert.Null(card.GetFrameScore(card.Frames[3])); // still needs 1 more
+
+        card.Roll(1);
+        Assert.Equal(30, card.GetFrameScore(card.Frames[0]));
+        Assert.Equal(30, card.GetFrameScore(card.Frames[1]));
+        Assert.Equal(23, card.GetFrameScore(card.Frames[2])); // 10+10+3
+        Assert.Equal(14, card.GetFrameScore(card.Frames[3])); // 10+3+1
+        Assert.Equal(4, card.GetFrameScore(card.Frames[4]));  // 3+1
+
+        // -- Frame 6: 0, 5 (open) --
+        card.Roll(0);
+        card.Roll(5);
+        Assert.Equal(5, card.GetFrameScore(card.Frames[5]));
+
+        // -- Frame 7: 2, 3 (open) --
+        card.Roll(2);
+        card.Roll(3);
+        Assert.Equal(5, card.GetFrameScore(card.Frames[6]));
+
+        // -- Frame 8: 4, 4 (open) --
+        card.Roll(4);
+        card.Roll(4);
+        Assert.Equal(8, card.GetFrameScore(card.Frames[7]));
+
+        // -- Frame 9: 1, 0 (open) --
+        card.Roll(1);
+        card.Roll(0);
+        Assert.Equal(1, card.GetFrameScore(card.Frames[8]));
+
+        // -- Frame 10: 6, 4, 10 (spare + bonus) --
+        card.Roll(6);
+        card.Roll(4);
+        Assert.Null(card.GetFrameScore(card.Frames[9])); // spare, needs bonus
+        card.Roll(10);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[9]));
+
+        // -- Final cumulative assertions --
+        // Recalculated:
+        // F0: 30, F1: 30, F2: 23, F3: 14, F4: 4, F5: 5, F6: 5, F7: 8, F8: 1, F9: 20
+        // Cumul: 30, 60, 83, 97, 101, 106, 111, 119, 120, 140
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(30, card.GetScore(card.Frames[0]));
+        Assert.Equal(60, card.GetScore(card.Frames[1]));
+        Assert.Equal(83, card.GetScore(card.Frames[2]));
+        Assert.Equal(97, card.GetScore(card.Frames[3]));
+        Assert.Equal(101, card.GetScore(card.Frames[4]));
+        Assert.Equal(106, card.GetScore(card.Frames[5]));
+        Assert.Equal(111, card.GetScore(card.Frames[6]));
+        Assert.Equal(119, card.GetScore(card.Frames[7]));
+        Assert.Equal(120, card.GetScore(card.Frames[8]));
+        Assert.Equal(140, card.GetScore(card.Frames[9]));
+        Assert.Equal(140, card.GetScore());
+    }
+
+    /// <summary>
+    /// Low-scoring game: lots of gutters and low rolls, no strikes or spares.
+    /// 
+    /// Frame  1: 0, 0  = 0   cumulative:  0
+    /// Frame  2: 1, 0  = 1   cumulative:  1
+    /// Frame  3: 0, 2  = 2   cumulative:  3
+    /// Frame  4: 3, 3  = 6   cumulative:  9
+    /// Frame  5: 0, 0  = 0   cumulative:  9
+    /// Frame  6: 1, 1  = 2   cumulative: 11
+    /// Frame  7: 0, 0  = 0   cumulative: 11
+    /// Frame  8: 2, 0  = 2   cumulative: 13
+    /// Frame  9: 0, 1  = 1   cumulative: 14
+    /// Frame 10: 1, 2  = 3   cumulative: 17
+    /// </summary>
+    [Fact]
+    public void FullGame_LowScoring_WithPerFrameAssertions()
+    {
+        var card = new ScoreCard();
+
+        RollMany(card, 0, 0);
+        Assert.Equal(0, card.GetFrameScore(card.Frames[0]));
+        Assert.Equal(0, card.GetScore(card.Frames[0]));
+
+        RollMany(card, 1, 0);
+        Assert.Equal(1, card.GetFrameScore(card.Frames[1]));
+        Assert.Equal(1, card.GetScore(card.Frames[1]));
+
+        RollMany(card, 0, 2);
+        Assert.Equal(2, card.GetFrameScore(card.Frames[2]));
+        Assert.Equal(3, card.GetScore(card.Frames[2]));
+
+        RollMany(card, 3, 3);
+        Assert.Equal(6, card.GetFrameScore(card.Frames[3]));
+        Assert.Equal(9, card.GetScore(card.Frames[3]));
+
+        RollMany(card, 0, 0);
+        Assert.Equal(0, card.GetFrameScore(card.Frames[4]));
+        Assert.Equal(9, card.GetScore(card.Frames[4]));
+
+        RollMany(card, 1, 1);
+        Assert.Equal(2, card.GetFrameScore(card.Frames[5]));
+        Assert.Equal(11, card.GetScore(card.Frames[5]));
+
+        RollMany(card, 0, 0);
+        Assert.Equal(0, card.GetFrameScore(card.Frames[6]));
+        Assert.Equal(11, card.GetScore(card.Frames[6]));
+
+        RollMany(card, 2, 0);
+        Assert.Equal(2, card.GetFrameScore(card.Frames[7]));
+        Assert.Equal(13, card.GetScore(card.Frames[7]));
+
+        RollMany(card, 0, 1);
+        Assert.Equal(1, card.GetFrameScore(card.Frames[8]));
+        Assert.Equal(14, card.GetScore(card.Frames[8]));
+
+        RollMany(card, 1, 2);
+        Assert.Equal(3, card.GetFrameScore(card.Frames[9]));
+        Assert.Equal(17, card.GetScore(card.Frames[9]));
+
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(17, card.GetScore());
+    }
+
+    /// <summary>
+    /// Alternating strikes and spares throughout the game.
+    /// 
+    /// Frame  1: 10          (strike)  bonus=6+4=10  -> 20  cumulative:  20
+    /// Frame  2: 6, 4        (spare)   bonus=10      -> 20  cumulative:  40
+    /// Frame  3: 10          (strike)  bonus=7+3=10  -> 20  cumulative:  60
+    /// Frame  4: 7, 3        (spare)   bonus=10      -> 20  cumulative:  80
+    /// Frame  5: 10          (strike)  bonus=8+2=10  -> 20  cumulative: 100
+    /// Frame  6: 8, 2        (spare)   bonus=10      -> 20  cumulative: 120
+    /// Frame  7: 10          (strike)  bonus=5+5=10  -> 20  cumulative: 140
+    /// Frame  8: 5, 5        (spare)   bonus=10      -> 20  cumulative: 160
+    /// Frame  9: 10          (strike)  bonus=9+1=10  -> 20  cumulative: 180
+    /// Frame 10: 9, 1, 10    (spare+bonus)           -> 20  cumulative: 200
+    /// </summary>
+    [Fact]
+    public void FullGame_AlternatingStrikesAndSpares_WithPerFrameAssertions()
+    {
+        var card = new ScoreCard();
+
+        // -- Frame 1: strike --
+        card.Roll(10);
+        Assert.Null(card.GetFrameScore(card.Frames[0]));
+
+        // -- Frame 2: 6, 4 (spare) --
+        card.Roll(6);
+        Assert.Null(card.GetFrameScore(card.Frames[0])); // still needs 1 more bonus roll
+        card.Roll(4);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[0])); // 10+6+4=20
+        Assert.Null(card.GetFrameScore(card.Frames[1]));       // spare needs next roll
+
+        // -- Frame 3: strike --
+        card.Roll(10);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[1])); // 10+10=20
+        Assert.Null(card.GetFrameScore(card.Frames[2]));
+
+        // -- Frame 4: 7, 3 (spare) --
+        card.Roll(7);
+        card.Roll(3);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[2])); // 10+7+3=20
+        Assert.Null(card.GetFrameScore(card.Frames[3]));
+
+        // -- Frame 5: strike --
+        card.Roll(10);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[3])); // 10+10=20
+        Assert.Null(card.GetFrameScore(card.Frames[4]));
+
+        // -- Frame 6: 8, 2 (spare) --
+        card.Roll(8);
+        card.Roll(2);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[4])); // 10+8+2=20
+        Assert.Null(card.GetFrameScore(card.Frames[5]));
+
+        // -- Frame 7: strike --
+        card.Roll(10);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[5])); // 10+10=20
+        Assert.Null(card.GetFrameScore(card.Frames[6]));
+
+        // -- Frame 8: 5, 5 (spare) --
+        card.Roll(5);
+        card.Roll(5);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[6])); // 10+5+5=20
+        Assert.Null(card.GetFrameScore(card.Frames[7]));
+
+        // -- Frame 9: strike --
+        card.Roll(10);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[7])); // 10+10=20
+        Assert.Null(card.GetFrameScore(card.Frames[8]));
+
+        // -- Frame 10: 9, 1, 10 (spare + bonus) --
+        card.Roll(9);
+        Assert.Null(card.GetFrameScore(card.Frames[8])); // needs 1 more
+        card.Roll(1);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[8])); // 10+9+1=20
+        Assert.Null(card.GetFrameScore(card.Frames[9]));       // spare needs bonus
+        card.Roll(10);
+        Assert.Equal(20, card.GetFrameScore(card.Frames[9])); // 9+1+10=20
+
+        // -- Final cumulative assertions --
+        Assert.True(card.IsGameComplete());
+        for (int i = 0; i < 10; i++)
+        {
+            Assert.Equal(20, card.GetFrameScore(card.Frames[i]));
+            Assert.Equal(20 * (i + 1), card.GetScore(card.Frames[i]));
+        }
+        Assert.Equal(200, card.GetScore());
+    }
 }
