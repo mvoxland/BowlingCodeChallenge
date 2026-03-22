@@ -925,4 +925,62 @@ public class ScoreCardTests
         }
         Assert.Equal(200, card.GetScore());
     }
+
+    // ── IsGameComplete Mid-Game ───────────────────────────────
+
+    [Fact]
+    public void IsGameComplete_MidGame_ReturnsFalse()
+    {
+        var card = new ScoreCard();
+        // Roll a few frames but don't finish
+        card.Roll(10); // frame 1
+        card.Roll(3);
+        card.Roll(4);  // frame 2
+        Assert.False(card.IsGameComplete());
+    }
+
+    // ── GetScore on Fresh Card ────────────────────────────────
+
+    [Fact]
+    public void GetScore_NoRolls_Returns0()
+    {
+        var card = new ScoreCard();
+        Assert.Equal(0, card.GetScore());
+    }
+
+    // ── GetScore(throughFrame) Null When Earlier Frame Is Indeterminate ──
+
+    [Fact]
+    public void GetScore_ThroughLaterFrame_NullWhenEarlierFrameIndeterminate()
+    {
+        var card = new ScoreCard();
+        // Frame 0: strike (needs 2 bonus rolls -> indeterminate)
+        card.Roll(10);
+        // Frame 1: strike (needs 2 bonus rolls -> indeterminate)
+        card.Roll(10);
+        // Frame 2: open (3+4=7) -> this frame itself is complete and scorable,
+        //   but cumulative score through frame 2 requires frames 0 & 1 to be
+        //   determinate first, and frame 0 is still missing its second bonus roll.
+
+        // Frame 0: 10 + 10 + ? = indeterminate (only 1 of 2 bonus rolls known)
+        Assert.Null(card.GetScore(card.Frames[0]));
+        // Frame 1: also indeterminate (0 of 2 bonus rolls known)
+        Assert.Null(card.GetScore(card.Frames[1]));
+
+        // Now give frame 2 its first roll — this is frame 0's second bonus roll
+        card.Roll(3);
+        // Frame 0 is now determinate: 10 + 10 + 3 = 23
+        Assert.Equal(23, card.GetFrameScore(card.Frames[0]));
+        // Frame 1 still indeterminate (has only 1 of 2 bonus rolls: the 3)
+        Assert.Null(card.GetFrameScore(card.Frames[1]));
+        // Cumulative through frame 1 is null because frame 1 is indeterminate
+        Assert.Null(card.GetScore(card.Frames[1]));
+
+        // Complete frame 2
+        card.Roll(4);
+        // Frame 1 now determinate: 10 + 3 + 4 = 17
+        Assert.Equal(17, card.GetFrameScore(card.Frames[1]));
+        // Cumulative through frame 2: 23 + 17 + 7 = 47
+        Assert.Equal(47, card.GetScore(card.Frames[2]));
+    }
 }

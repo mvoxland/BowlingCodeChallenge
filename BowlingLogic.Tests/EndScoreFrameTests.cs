@@ -312,4 +312,22 @@ public class EndScoreFrameTests
         frame.AddRoll(4); // open
         Assert.Equal(0, frame.GetBonusRolls());
     }
+
+    // ── Gutter-Spare Pin Reset ────────────────────────────────
+
+    [Fact]
+    public void TenthFrame_GutterSpare_PinResetCorrect()
+    {
+        // Rolls: 0, 10 (spare via gutter + 10), then bonus roll of any value.
+        // This exercises the pin-reset path in GetCurrentRollPinsUsed where
+        // totalUsed reaches PinCount (0+10=10) and resets to 0, allowing a
+        // full-pin bonus roll.
+        var frame = new EndScoreFrame();
+        frame.AddRoll(0);  // gutter
+        frame.AddRoll(10); // spare (0+10=10), pins reset
+        Assert.False(frame.IsComplete); // earned 3rd roll, not yet thrown
+        frame.AddRoll(10); // bonus roll: full 10 is valid after reset
+        Assert.True(frame.IsComplete);
+        Assert.Equal(20, frame.GetRawScore()); // 0 + 10 + 10
+    }
 }
