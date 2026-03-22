@@ -1,0 +1,230 @@
+@page "/score-calculator"
+@using BowlingLogic
+
+<PageTitle>Score Calculator</PageTitle>
+
+<h1>Score Calculator</h1>
+
+<div class="scorecard-container">
+    <table class="scorecard">
+        <tr class="frame-header-row">
+            @for (int i = 0; i < scoreCard.TotalFrames; i++)
+            {
+                var frameIndex = i;
+                bool isLast = frameIndex == scoreCard.TotalFrames - 1;
+                bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
+                <th class="frame-header @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
+                    @(frameIndex + 1)
+                </th>
+            }
+        </tr>
+        <tr class="rolls-row">
+            @for (int i = 0; i < scoreCard.TotalFrames; i++)
+            {
+                var frameIndex = i;
+                bool isLast = frameIndex == scoreCard.TotalFrames - 1;
+                bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
+                <td class="roll-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
+                    <div class="roll-boxes">
+                        <span class="roll-box @GetRollClass(frameIndex, 0)">@GetRollDisplay(frameIndex, 0)</span>
+                        <span class="roll-box @GetRollClass(frameIndex, 1)">@GetRollDisplay(frameIndex, 1)</span>
+                        @if (isLast)
+                        {
+                            <span class="roll-box @GetRollClass(frameIndex, 2)">@GetRollDisplay(frameIndex, 2)</span>
+                        }
+                    </div>
+                </td>
+            }
+        </tr>
+        <tr class="score-row">
+            @for (int i = 0; i < scoreCard.TotalFrames; i++)
+            {
+                var frameIndex = i;
+                bool isLast = frameIndex == scoreCard.TotalFrames - 1;
+                bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
+                <td class="score-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
+                    @GetCumulativeScore(frameIndex)
+                </td>
+            }
+        </tr>
+    </table>
+</div>
+
+@if (scoreCard.IsGameComplete())
+{
+    <div class="game-status game-over">
+        Game Over! Final Score: <strong>@scoreCard.GetScore()</strong>
+    </div>
+}
+else
+{
+    <div class="game-status">
+        Frame @((scoreCard.GetCurrentFrameIndex() ?? 0) + 1) &mdash; Ball @GetCurrentBallNumber()
+    </div>
+}
+
+@if (!scoreCard.IsGameComplete())
+{
+    <div class="pin-buttons">
+        @for (int i = 0; i <= GetRemainingPins(); i++)
+        {
+            var pins = i;
+            <button class="btn pin-btn" @onclick="() => HandleRoll(pins)">
+                @pins
+            </button>
+        }
+    </div>
+}
+
+<div class="new-game-section">
+    <button class="btn btn-outline-secondary" @onclick="NewGame">New Game</button>
+</div>
+
+@code {
+    private ScoreCard scoreCard = new();
+
+    private void HandleRoll(int pins)
+    {
+        scoreCard.Roll(pins);
+    }
+
+    private void NewGame()
+    {
+        scoreCard = new ScoreCard();
+    }
+
+    private int GetRemainingPins()
+    {
+        var frame = scoreCard.GetCurrentFrame();
+        if (frame is null) return 0;
+        return frame.PinCount - frame.GetCurrentRollPinsUsed();
+    }
+
+    private int GetCurrentBallNumber()
+    {
+        var frame = scoreCard.GetCurrentFrame();
+        if (frame is null) return 0;
+        return frame.Rolls.Count + 1;
+    }
+
+    private string GetCumulativeScore(int frameIndex)
+    {
+        var frame = scoreCard.Frames[frameIndex];
+        var score = scoreCard.GetScore(frame);
+        return score?.ToString() ?? "";
+    }
+
+    /// <summary>
+    /// Returns the display symbol for a given roll in a frame, using standard bowling notation.
+    /// Frames 1-9: strike is shown as empty first box, "X" in second box.
+    /// Frame 10: each roll displayed independently with pin-reset awareness.
+    /// </summary>
+    private string GetRollDisplay(int frameIndex, int rollIndex)
+    {
+        var frame = scoreCard.Frames[frameIndex];
+        bool isLastFrame = frameIndex == scoreCard.TotalFrames - 1;
+
+        if (rollIndex >= frame.Rolls.Count)
+            return "";
+
+        int pins = frame.Rolls[rollIndex];
+
+        if (!isLastFrame)
+            return GetStandardFrameRollDisplay(frame, rollIndex, pins);
+        else
+            return GetLastFrameRollDisplay(frame, rollIndex, pins);
+    }
+
+    /// <summary>
+    /// Roll display for frames 1-9.
+    /// Convention: strikes show as empty first box, "X" in the second box.
+    /// </summary>
+    private string GetStandardFrameRollDisplay(ScoreFrame frame, int rollIndex, int pins)
+    {
+        if (rollIndex == 0)
+        {
+            if (pins == frame.PinCount) return "";
+            return pins == 0 ? "-" : pins.ToString();
+        }
+        else
+        {
+            if (frame.Rolls[0] == frame.PinCount) return "X";
+            if (frame.Rolls[0] + pins == frame.PinCount) return "/";
+            return pins == 0 ? "-" : pins.ToString();
+        }
+    }
+
+    /// <summary>
+    /// Roll display for the 10th frame, handling pin resets after strikes and spares.
+    /// </summary>
+    private string GetLastFrameRollDisplay(ScoreFrame frame, int rollIndex, int pins)
+    {
+        if (rollIndex == 0)
+        {
+            if (pins == frame.PinCount) return "X";
+            return pins == 0 ? "-" : pins.ToString();
+        }
+        else if (rollIndex == 1)
+        {
+            bool pinsWereReset = frame.Rolls[0] == frame.PinCount;
+            if (pinsWereReset)
+            {
+                if (pins == frame.PinCount) return "X";
+                return pins == 0 ? "-" : pins.ToString();
+            }
+            else
+            {
+                if (frame.Rolls[0] + pins == frame.PinCount) return "/";
+                return pins == 0 ? "-" : pins.ToString();
+            }
+        }
+        else
+        {
+            return GetLastFrameThirdRollDisplay(frame, pins);
+        }
+    }
+
+    private string GetLastFrameThirdRollDisplay(ScoreFrame frame, int pins)
+    {
+        bool roll1Strike = frame.Rolls[0] == frame.PinCount;
+        bool roll2Strike = frame.Rolls[1] == frame.PinCount;
+        bool firstTwoSpare = !roll1Strike && (frame.Rolls[0] + frame.Rolls[1] == frame.PinCount);
+
+        // After two strikes, roll 3 is on fresh pins
+        if (roll1Strike && roll2Strike)
+        {
+            if (pins == frame.PinCount) return "X";
+            return pins == 0 ? "-" : pins.ToString();
+        }
+
+        // Strike then non-strike: roll 3 finishes the second set of pins
+        if (roll1Strike && !roll2Strike)
+        {
+            if (frame.Rolls[1] + pins == frame.PinCount) return "/";
+            return pins == 0 ? "-" : pins.ToString();
+        }
+
+        // Spare: roll 3 is on fresh pins
+        if (firstTwoSpare)
+        {
+            if (pins == frame.PinCount) return "X";
+            return pins == 0 ? "-" : pins.ToString();
+        }
+
+        return pins.ToString();
+    }
+
+    /// <summary>
+    /// Returns a CSS class for special roll symbols (strike/spare) to allow distinct styling.
+    /// </summary>
+    private string GetRollClass(int frameIndex, int rollIndex)
+    {
+        var display = GetRollDisplay(frameIndex, rollIndex);
+        return display switch
+        {
+            "X" => "strike",
+            "/" => "spare",
+            _ => ""
+        };
+    }
+}

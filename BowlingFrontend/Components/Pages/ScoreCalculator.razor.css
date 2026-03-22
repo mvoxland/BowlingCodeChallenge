@@ -1,0 +1,181 @@
+/* ===== Scorecard Table ===== */
+
+.scorecard-container {
+    overflow-x: auto;
+    margin: 1.5rem 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.scorecard {
+    border-collapse: collapse;
+    border: 2px solid #333;
+    min-width: 100%;
+    table-layout: fixed;
+}
+
+/* ===== Frame Headers ===== */
+
+.frame-header {
+    background: #2c3e50;
+    color: #fff;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 0.3rem 0;
+    border: 1px solid #333;
+    width: 60px;
+}
+
+.frame-header.last-frame {
+    width: 90px;
+}
+
+/* ===== Roll Cells ===== */
+
+.roll-cell {
+    border: 1px solid #333;
+    padding: 0;
+    vertical-align: top;
+    height: 40px;
+    background: #fff;
+}
+
+.roll-boxes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0;
+}
+
+.roll-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-left: 1px solid #999;
+    border-bottom: 1px solid #999;
+    font-size: 0.85rem;
+    font-weight: 600;
+    background: #fafafa;
+}
+
+.roll-box:first-child {
+    border-left: none;
+}
+
+.roll-box.strike {
+    color: #c0392b;
+    font-weight: 700;
+}
+
+.roll-box.spare {
+    color: #2980b9;
+    font-weight: 700;
+}
+
+/* ===== Score Cells ===== */
+
+.score-cell {
+    border: 1px solid #333;
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 0.4rem 0.25rem;
+    height: 44px;
+    vertical-align: middle;
+    background: #fff;
+}
+
+/* ===== Current Frame Highlight ===== */
+
+.current-frame {
+    background-color: #ebf5fb;
+}
+
+th.current-frame {
+    background-color: #2980b9;
+}
+
+/* ===== Game Status ===== */
+
+.game-status {
+    text-align: center;
+    font-size: 1.1rem;
+    margin: 1rem 0;
+    color: #555;
+}
+
+.game-over {
+    font-size: 1.4rem;
+    color: #27ae60;
+}
+
+/* ===== Pin Buttons ===== */
+
+.pin-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin: 1.25rem 0;
+}
+
+.pin-btn {
+    min-width: 52px;
+    height: 52px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    border-radius: 8px;
+    background-color: #2c3e50;
+    color: #fff;
+    border: 2px solid #1a252f;
+    transition: background-color 0.15s, transform 0.1s;
+}
+
+.pin-btn:hover {
+    background-color: #34495e;
+    color: #fff;
+}
+
+.pin-btn:active {
+    transform: scale(0.95);
+    background-color: #1a252f;
+    color: #fff;
+}
+
+/* ===== New Game ===== */
+
+.new-game-section {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+/* ===== Responsive ===== */
+
+@media (max-width: 640px) {
+    .frame-header {
+        width: 48px;
+        font-size: 0.75rem;
+    }
+
+    .frame-header.last-frame {
+        width: 72px;
+    }
+
+    .roll-box {
+        width: 22px;
+        height: 22px;
+        font-size: 0.75rem;
+    }
+
+    .score-cell {
+        font-size: 0.9rem;
+        padding: 0.3rem 0.15rem;
+    }
+
+    .pin-btn {
+        min-width: 44px;
+        height: 44px;
+        font-size: 1rem;
+    }
+}
