@@ -68,5 +68,5 @@ public class ScoreFrame
     /// Returns pins already knocked down in the current "set" of rolls (used for validation).
     /// For standard frame this is just sum of rolls, since there is no reset mid-frame.
     /// </summary>
-    protected virtual int GetCurrentRollPinsUsed() => Rolls.Sum();
+    public virtual int GetCurrentRollPinsUsed() => Rolls.Sum();
 }

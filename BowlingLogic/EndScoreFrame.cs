@@ -47,7 +47,7 @@ public class EndScoreFrame : ScoreFrame
     /// Returns pins already knocked down in the current "set" of rolls (used for validation).
     /// In the final frame the set can reset from a strike/spare, so track from last time all pins were down.
     /// </summary>
-    protected override int GetCurrentRollPinsUsed()
+    public override int GetCurrentRollPinsUsed()
     {
         if (Rolls.Count == 0)
             return 0;
