@@ -983,4 +983,213 @@ public class ScoreCardTests
         // Cumulative through frame 2: 23 + 17 + 7 = 47
         Assert.Equal(47, card.GetScore(card.Frames[2]));
     }
+
+    // ══════════════════════════════════════════════════════════
+    // 1-Pin Games
+    // ══════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Perfect 1-pin game: every roll knocks down 1 pin (a strike every frame).
+    /// 12 rolls total (9 regular + 3 in the 10th frame).
+    /// Each frame scores 1 + 1 + 1 = 3, total = 30.
+    /// </summary>
+    [Fact]
+    public void OnePinGame_PerfectGame_AllStrikes()
+    {
+        var card = new ScoreCard(totalFrames: 10, pinCount: 1);
+        RollRepeated(card, 1, 12);
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(30, card.GetScore());
+
+        // Every frame should score 3
+        for (int i = 0; i < 10; i++)
+        {
+            Assert.Equal(3, card.GetFrameScore(card.Frames[i]));
+            Assert.Equal(3 * (i + 1), card.GetScore(card.Frames[i]));
+        }
+    }
+
+    /// <summary>
+    /// All-gutter 1-pin game: every roll is 0.
+    /// 20 rolls total, score = 0.
+    /// </summary>
+    [Fact]
+    public void OnePinGame_AllGutters_Score0()
+    {
+        var card = new ScoreCard(totalFrames: 10, pinCount: 1);
+        RollRepeated(card, 0, 20);
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(0, card.GetScore());
+    }
+
+    /// <summary>
+    /// 1-pin game with a spare in a regular frame.
+    /// A spare is [0, 1] since 0 + 1 = PinCount (1).
+    /// Spare bonus = next 1 roll.
+    ///
+    /// Frames 0-7: all gutters (0, 0)            -> 0 each
+    /// Frame  8:   0, 1 (spare), bonus = 1       -> 2     cumulative: 2
+    /// Frame  9:   1, 1, 1 (three strikes)       -> 3     cumulative: 5
+    /// </summary>
+    [Fact]
+    public void OnePinGame_SpareInRegularFrame()
+    {
+        var card = new ScoreCard(totalFrames: 10, pinCount: 1);
+        // Frames 0-7: gutters
+        RollRepeated(card, 0, 16);
+        // Frame 8: spare (0 + 1 = PinCount)
+        card.Roll(0);
+        card.Roll(1);
+        Assert.Null(card.GetFrameScore(card.Frames[8])); // spare, needs bonus roll
+        // Frame 9 (end): three strikes
+        card.Roll(1);
+        Assert.Equal(2, card.GetFrameScore(card.Frames[8])); // 1 + bonus(1) = 2
+        card.Roll(1);
+        card.Roll(1);
+
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(3, card.GetFrameScore(card.Frames[9]));
+        Assert.Equal(2, card.GetScore(card.Frames[8]));
+        Assert.Equal(5, card.GetScore(card.Frames[9]));
+        Assert.Equal(5, card.GetScore());
+    }
+
+    /// <summary>
+    /// 1-pin 10th frame: three strikes [1, 1, 1] with pin resets.
+    /// Frames 0-8: gutters. Frame 9: raw score = 3, total = 3.
+    /// </summary>
+    [Fact]
+    public void OnePinGame_TenthFrame_StrikeBonuses()
+    {
+        var card = new ScoreCard(totalFrames: 10, pinCount: 1);
+        // Frames 0-8: gutters
+        RollRepeated(card, 0, 18);
+        // Frame 9 (end): 1, 1, 1
+        card.Roll(1);
+        Assert.False(card.IsGameComplete());
+        card.Roll(1);
+        Assert.False(card.IsGameComplete());
+        card.Roll(1);
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(3, card.GetFrameScore(card.Frames[9]));
+        Assert.Equal(3, card.GetScore());
+    }
+
+    /// <summary>
+    /// 1-pin 10th frame: gutter then spare [0, 1, 1].
+    /// 0 + 1 = PinCount (1) triggers pin reset, allowing a bonus roll of 1.
+    /// Frames 0-8: gutters. Frame 9: raw score = 2, total = 2.
+    /// </summary>
+    [Fact]
+    public void OnePinGame_TenthFrame_GutterSpare()
+    {
+        var card = new ScoreCard(totalFrames: 10, pinCount: 1);
+        // Frames 0-8: gutters
+        RollRepeated(card, 0, 18);
+        // Frame 9 (end): gutter, spare, bonus
+        card.Roll(0);
+        card.Roll(1); // spare (0+1 = PinCount), pins reset
+        Assert.False(card.IsGameComplete()); // earned 3rd roll
+        card.Roll(1); // bonus roll after pin reset
+        Assert.True(card.IsGameComplete());
+        Assert.Equal(2, card.GetFrameScore(card.Frames[9]));
+        Assert.Equal(2, card.GetScore());
+    }
+
+    /// <summary>
+    /// Mixed 1-pin game with per-frame assertions throughout.
+    ///
+    /// Frame  0: 1           (strike)  bonus=0+0=0   -> 1   cumulative:  1
+    /// Frame  1: 0, 0        (open)                   -> 0   cumulative:  1
+    /// Frame  2: 0, 1        (spare)   bonus=1        -> 2   cumulative:  3
+    /// Frame  3: 1           (strike)  bonus=1+0=1    -> 2   cumulative:  5
+    /// Frame  4: 1           (strike)  bonus=0+1=1    -> 2   cumulative:  7
+    /// Frame  5: 0, 1        (spare)   bonus=0        -> 1   cumulative:  8
+    /// Frame  6: 0, 0        (open)                   -> 0   cumulative:  8
+    /// Frame  7: 1           (strike)  bonus=1+1=2    -> 3   cumulative: 11
+    /// Frame  8: 1           (strike)  bonus=1+1=2    -> 3   cumulative: 14
+    /// Frame  9: 1, 1, 1     (end: 3 strikes)         -> 3   cumulative: 17
+    /// </summary>
+    [Fact]
+    public void OnePinGame_MixedGame_WithPerFrameAssertions()
+    {
+        var card = new ScoreCard(totalFrames: 10, pinCount: 1);
+
+        // -- Frame 0: strike (1) --
+        card.Roll(1);
+        Assert.Null(card.GetFrameScore(card.Frames[0])); // needs 2 bonus rolls
+
+        // -- Frame 1: 0, 0 (open) --
+        card.Roll(0);
+        Assert.Null(card.GetFrameScore(card.Frames[0])); // still needs 1 more bonus
+        card.Roll(0);
+        Assert.Equal(1, card.GetFrameScore(card.Frames[0])); // 1 + 0 + 0 = 1
+        Assert.Equal(0, card.GetFrameScore(card.Frames[1]));
+        Assert.Equal(1, card.GetScore(card.Frames[0]));
+        Assert.Equal(1, card.GetScore(card.Frames[1]));
+
+        // -- Frame 2: 0, 1 (spare) --
+        card.Roll(0);
+        card.Roll(1);
+        Assert.Null(card.GetFrameScore(card.Frames[2])); // spare, needs bonus
+
+        // -- Frame 3: strike (1) --
+        card.Roll(1);
+        Assert.Equal(2, card.GetFrameScore(card.Frames[2])); // 1 + bonus(1) = 2
+        Assert.Null(card.GetFrameScore(card.Frames[3]));      // strike, needs 2 bonus
+        Assert.Equal(3, card.GetScore(card.Frames[2]));
+
+        // -- Frame 4: strike (1) --
+        card.Roll(1);
+        Assert.Null(card.GetFrameScore(card.Frames[3])); // still needs 1 more bonus
+        Assert.Null(card.GetFrameScore(card.Frames[4])); // needs 2 bonus
+
+        // -- Frame 5: 0, 1 (spare) --
+        card.Roll(0);
+        Assert.Equal(2, card.GetFrameScore(card.Frames[3])); // 1 + 1 + 0 = 2
+        Assert.Null(card.GetFrameScore(card.Frames[4]));      // still needs 1 more
+        card.Roll(1);
+        Assert.Equal(2, card.GetFrameScore(card.Frames[4])); // 1 + 0 + 1 = 2
+        Assert.Null(card.GetFrameScore(card.Frames[5]));      // spare, needs bonus
+
+        // Verify cumulative through frame 5 is indeterminate (spare not resolved)
+        Assert.Null(card.GetScore(card.Frames[5]));
+        // But partial running total should be through frame 4
+        Assert.Equal(7, card.GetScore());
+
+        // -- Frame 6: 0, 0 (open) --
+        card.Roll(0);
+        Assert.Equal(1, card.GetFrameScore(card.Frames[5])); // 1 + bonus(0) = 1
+        card.Roll(0);
+        Assert.Equal(0, card.GetFrameScore(card.Frames[6]));
+        Assert.Equal(8, card.GetScore(card.Frames[6]));
+
+        // -- Frame 7: strike (1) --
+        card.Roll(1);
+        Assert.Null(card.GetFrameScore(card.Frames[7])); // needs 2 bonus
+
+        // -- Frame 8: strike (1) --
+        card.Roll(1);
+        Assert.Null(card.GetFrameScore(card.Frames[7])); // still needs 1 more
+        Assert.Null(card.GetFrameScore(card.Frames[8])); // needs 2 bonus
+
+        // -- Frame 9 (end): 1, 1, 1 --
+        card.Roll(1);
+        Assert.Equal(3, card.GetFrameScore(card.Frames[7])); // 1 + 1 + 1 = 3
+        Assert.Null(card.GetFrameScore(card.Frames[8]));      // still needs 1 more bonus
+        card.Roll(1);
+        Assert.Equal(3, card.GetFrameScore(card.Frames[8])); // 1 + 1 + 1 = 3
+        Assert.False(card.IsGameComplete());
+        card.Roll(1);
+        Assert.Equal(3, card.GetFrameScore(card.Frames[9])); // raw 1+1+1 = 3
+        Assert.True(card.IsGameComplete());
+
+        // -- Final cumulative assertions --
+        int[] expectedCumulative = [1, 1, 3, 5, 7, 8, 8, 11, 14, 17];
+        for (int i = 0; i < 10; i++)
+        {
+            Assert.Equal(expectedCumulative[i], card.GetScore(card.Frames[i]));
+        }
+        Assert.Equal(17, card.GetScore());
+    }
 }
