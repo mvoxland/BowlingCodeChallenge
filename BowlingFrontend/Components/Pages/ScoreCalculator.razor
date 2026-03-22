@@ -8,8 +8,9 @@
 <div class="scorecard-container">
     <table class="scorecard">
         <tr class="frame-header-row">
-            @for (int frameIndex = 0; frameIndex < scoreCard.TotalFrames; frameIndex++)
+            @for (int i = 0; i < scoreCard.TotalFrames; i++)
             {
+                var frameIndex = i;
                 bool isLast = frameIndex == scoreCard.TotalFrames - 1;
                 bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
                 <th class="frame-header @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
@@ -18,8 +19,9 @@
             }
         </tr>
         <tr class="rolls-row">
-            @for (int frameIndex = 0; frameIndex < scoreCard.TotalFrames; frameIndex++)
+            @for (int i = 0; i < scoreCard.TotalFrames; i++)
             {
+                var frameIndex = i;
                 bool isLast = frameIndex == scoreCard.TotalFrames - 1;
                 bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
                 <td class="roll-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
@@ -35,8 +37,9 @@
             }
         </tr>
         <tr class="score-row">
-            @for (int frameIndex = 0; frameIndex < scoreCard.TotalFrames; frameIndex++)
+            @for (int i = 0; i < scoreCard.TotalFrames; i++)
             {
+                var frameIndex = i;
                 bool isLast = frameIndex == scoreCard.TotalFrames - 1;
                 bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
                 <td class="score-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
@@ -63,10 +66,11 @@ else
 @if (!scoreCard.IsGameComplete())
 {
     <div class="pin-buttons">
-        @for (int pinsNum = 0; pinsNum <= GetRemainingPins(); pinsNum++)
+        @for (int i = 0; i <= GetRemainingPins(); i++)
         {
-            <button class="btn pin-btn" @onclick="() => HandleRoll(pinsNum)">
-                @pinsNum
+            var pins = i;
+            <button class="btn pin-btn" @onclick="() => HandleRoll(pins)">
+                @pins
             </button>
         }
     </div>
