@@ -1,54 +1,12 @@
 @page "/score-calculator"
+@using BowlingFrontend.Components.GameDisplay
 @using BowlingLogic
 
 <PageTitle>Score Calculator</PageTitle>
 
 <h1>Score Calculator</h1>
 
-<div class="scorecard-container">
-    <table class="scorecard">
-        <tr class="frame-header-row">
-            @for (int i = 0; i < scoreCard.TotalFrames; i++)
-            {
-                var frameIndex = i;
-                bool isLast = frameIndex == scoreCard.TotalFrames - 1;
-                bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
-                <th class="frame-header @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
-                    @(frameIndex + 1)
-                </th>
-            }
-        </tr>
-        <tr class="rolls-row">
-            @for (int i = 0; i < scoreCard.TotalFrames; i++)
-            {
-                var frameIndex = i;
-                bool isLast = frameIndex == scoreCard.TotalFrames - 1;
-                bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
-                <td class="roll-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
-                    <div class="roll-boxes">
-                        <span class="roll-box @GetRollClass(frameIndex, 0)">@GetRollDisplay(frameIndex, 0)</span>
-                        <span class="roll-box @GetRollClass(frameIndex, 1)">@GetRollDisplay(frameIndex, 1)</span>
-                        @if (isLast)
-                        {
-                            <span class="roll-box @GetRollClass(frameIndex, 2)">@GetRollDisplay(frameIndex, 2)</span>
-                        }
-                    </div>
-                </td>
-            }
-        </tr>
-        <tr class="score-row">
-            @for (int i = 0; i < scoreCard.TotalFrames; i++)
-            {
-                var frameIndex = i;
-                bool isLast = frameIndex == scoreCard.TotalFrames - 1;
-                bool isCurrent = frameIndex == scoreCard.GetCurrentFrameIndex();
-                <td class="score-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
-                    @GetCumulativeScore(frameIndex)
-                </td>
-            }
-        </tr>
-    </table>
-</div>
+<ScoreCardDisplay ScoreCard="@scoreCard" />
 
 @if (scoreCard.IsGameComplete())
 {
@@ -105,56 +63,5 @@ else
         var frame = scoreCard.GetCurrentFrame();
         if (frame is null) return 0;
         return frame.Rolls.Count + 1;
-    }
-
-    private string GetCumulativeScore(int frameIndex)
-    {
-        var frame = scoreCard.Frames[frameIndex];
-        var score = scoreCard.GetScore(frame);
-        return score?.ToString() ?? "";
-    }
-
-    /// <summary>
-    /// Returns the text to display for a given roll in a frame.
-    /// </summary>
-    private string GetRollDisplay(int frameIndex, int rollIndex)
-    {
-        var frame = scoreCard.Frames[frameIndex];
-
-        if (rollIndex >= frame.Rolls.Count)
-            return "";
-
-        int rolled = frame.Rolls[rollIndex];
-
-        if (rolled == frame.PinCount)
-        {
-            return "X";
-        }
-        else if (rollIndex == 1 && frame.Rolls[0] + rolled == frame.PinCount)
-        {
-            return "/";
-        }
-        else if(rolled == 0)
-        {
-            return "-";
-        }
-        else
-        {
-            return rolled.ToString();
-        }
-    }
-
-    /// <summary>
-    /// Returns a CSS class for special roll symbols (strike/spare) to allow distinct styling.
-    /// </summary>
-    private string GetRollClass(int frameIndex, int rollIndex)
-    {
-        var display = GetRollDisplay(frameIndex, rollIndex);
-        return display switch
-        {
-            "X" => "strike",
-            "/" => "spare",
-            _ => ""
-        };
     }
 }
