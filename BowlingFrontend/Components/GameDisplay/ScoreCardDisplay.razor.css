@@ -3,25 +3,7 @@
 .scorecard-container {
     overflow-x: auto;
     margin: 1.5rem 0;
-    padding: 0.5rem;
-    border: 2px solid transparent;
-    border-radius: 6px;
     -webkit-overflow-scrolling: touch;
-    transition: border-color 0.2s, background-color 0.2s;
-}
-
-.scorecard-container.active {
-    border-color: #2980b9;
-    background-color: #f0f8ff;
-}
-
-/* ===== Player Name ===== */
-
-.player-name {
-    font-weight: 700;
-    font-size: 1.1rem;
-    margin-bottom: 0.4rem;
-    color: #2c3e50;
 }
 
 .scorecard {
@@ -29,6 +11,26 @@
     border: 2px solid #333;
     min-width: 100%;
     table-layout: fixed;
+}
+
+/* ===== Player Name Cell ===== */
+
+.player-header {
+    background: #2c3e50;
+    border: 1px solid #333;
+    width: 100px;
+}
+
+.player-name-cell {
+    background: #2c3e50;
+    color: #fff;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.5rem;
+    border: 1px solid #333;
+    vertical-align: middle;
+    width: 100px;
 }
 
 /* ===== Frame Headers ===== */
@@ -103,10 +105,25 @@
     background: #fff;
 }
 
+/* ===== Active Player Highlight ===== */
+
+tr.active-player td.roll-cell,
+tr.active-player td.score-cell {
+    background-color: #ebf5fb;
+}
+
+tr.active-player .roll-box {
+    background-color: #ebf5fb;
+}
+
 /* ===== Current Frame Highlight ===== */
 
 .current-frame {
-    background-color: #ebf5fb;
+    background-color: #d4eaf7;
+}
+
+.current-frame .roll-box {
+    background-color: #d4eaf7;
 }
 
 th.current-frame {
@@ -116,6 +133,13 @@ th.current-frame {
 /* ===== Responsive ===== */
 
 @media (max-width: 640px) {
+    .player-header,
+    .player-name-cell {
+        width: 70px;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.3rem;
+    }
+
     .frame-header {
         width: 48px;
         font-size: 0.75rem;

@@ -39,7 +39,7 @@
 
 @if (scoreCard is not null)
 {
-    <ScoreCardDisplay ScoreCard="@scoreCard" />
+    <ScoreCardDisplay Players="@([new PlayerScoreCard { Name = "", ScoreCard = scoreCard }])" />
 
     @if (scoreCard.IsGameComplete())
     {

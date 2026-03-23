@@ -58,12 +58,8 @@
 
 @if (players is not null)
 {
-    @foreach (var (index, player) in players.Index())
-    {
-        <ScoreCardDisplay ScoreCard="@player.ScoreCard"
-                          PlayerName="@player.Name"
-                          IsActive="@(index == activePlayerIndex && !IsGameOver)" />
-    }
+    <ScoreCardDisplay Players="@players"
+                      ActivePlayerIndex="@(IsGameOver ? null : activePlayerIndex)" />
 
     @if (IsGameOver)
     {
@@ -104,12 +100,6 @@
 }
 
 @code {
-    class PlayerScoreCard
-    {
-        public required string Name { get; set; }
-        public required ScoreCard ScoreCard { get; set; }
-    }
-
     List<PlayerScoreCard>? players;
     int activePlayerIndex;
 

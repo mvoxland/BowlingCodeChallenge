@@ -1,79 +1,90 @@
-﻿@using BowlingLogic
+@using BowlingLogic
 
-<div class="scorecard-container @(IsActive ? "active" : "")">
-    @if (PlayerName is not null)
-    {
-        <div class="player-name">@PlayerName</div>
-    }
+<div class="scorecard-container">
     <table class="scorecard">
         <tr class="frame-header-row">
-            @for (int i = 0; i < ScoreCard.TotalFrames; i++)
+            @if (showNames)
+            {
+                <th class="player-header"></th>
+            }
+            @for (int i = 0; i < maxFrames; i++)
             {
                 var frameIndex = i;
-                bool isLast = frameIndex == ScoreCard.TotalFrames - 1;
-                bool isCurrent = frameIndex == ScoreCard.GetCurrentFrameIndex();
-                <th class="frame-header @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
+                <th class="frame-header @(frameIndex == maxFrames - 1 ? "last-frame" : "")">
                     @(frameIndex + 1)
                 </th>
             }
         </tr>
-        <tr class="rolls-row">
-            @for (int i = 0; i < ScoreCard.TotalFrames; i++)
-            {
-                var frameIndex = i;
-                bool isLast = frameIndex == ScoreCard.TotalFrames - 1;
-                bool isCurrent = frameIndex == ScoreCard.GetCurrentFrameIndex();
-                <td class="roll-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
-                    <div class="roll-boxes">
-                        <span class="roll-box @GetRollClass(frameIndex, 0)">@GetRollDisplay(frameIndex, 0)</span>
-                        <span class="roll-box @GetRollClass(frameIndex, 1)">@GetRollDisplay(frameIndex, 1)</span>
-                        @if (isLast)
-                        {
-                            <span class="roll-box @GetRollClass(frameIndex, 2)">@GetRollDisplay(frameIndex, 2)</span>
-                        }
-                    </div>
-                </td>
-            }
-        </tr>
-        <tr class="score-row">
-            @for (int i = 0; i < ScoreCard.TotalFrames; i++)
-            {
-                var frameIndex = i;
-                bool isLast = frameIndex == ScoreCard.TotalFrames - 1;
-                bool isCurrent = frameIndex == ScoreCard.GetCurrentFrameIndex();
-                <td class="score-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
-                    @GetCumulativeScore(frameIndex)
-                </td>
-            }
-        </tr>
+
+        @for (int p = 0; p < Players.Count; p++)
+        {
+            var playerIndex = p;
+            var player = Players[playerIndex];
+            var card = player.ScoreCard;
+            bool isActive = playerIndex == ActivePlayerIndex;
+            bool highlightCurrentFrame = ActivePlayerIndex is null || isActive;
+
+            <tr class="rolls-row @(isActive ? "active-player" : "")">
+                @if (showNames)
+                {
+                    <td class="player-name-cell" rowspan="2">@player.Name</td>
+                }
+                @for (int i = 0; i < card.TotalFrames; i++)
+                {
+                    var frameIndex = i;
+                    bool isLast = frameIndex == card.TotalFrames - 1;
+                    bool isCurrent = highlightCurrentFrame && frameIndex == card.GetCurrentFrameIndex();
+                    <td class="roll-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
+                        <div class="roll-boxes">
+                            <span class="roll-box @GetRollClass(card, frameIndex, 0)">@GetRollDisplay(card, frameIndex, 0)</span>
+                            <span class="roll-box @GetRollClass(card, frameIndex, 1)">@GetRollDisplay(card, frameIndex, 1)</span>
+                            @if (isLast)
+                            {
+                                <span class="roll-box @GetRollClass(card, frameIndex, 2)">@GetRollDisplay(card, frameIndex, 2)</span>
+                            }
+                        </div>
+                    </td>
+                }
+            </tr>
+            <tr class="score-row @(isActive ? "active-player" : "")">
+                @for (int i = 0; i < card.TotalFrames; i++)
+                {
+                    var frameIndex = i;
+                    bool isLast = frameIndex == card.TotalFrames - 1;
+                    bool isCurrent = highlightCurrentFrame && frameIndex == card.GetCurrentFrameIndex();
+                    <td class="score-cell @(isCurrent ? "current-frame" : "") @(isLast ? "last-frame" : "")">
+                        @GetCumulativeScore(card, frameIndex)
+                    </td>
+                }
+            </tr>
+        }
     </table>
 </div>
 
 @code {
     [Parameter, EditorRequired]
-    public ScoreCard ScoreCard { get; set; }
+    public IReadOnlyList<PlayerScoreCard> Players { get; set; } = [];
 
     [Parameter]
-    public string? PlayerName { get; set; }
+    public int? ActivePlayerIndex { get; set; }
 
-    [Parameter]
-    public bool IsActive { get; set; }
+    bool showNames => Players.Count > 1;
 
-    public EventCallback<int> Rolled { get; set; }
+    int maxFrames => Players.Count > 1 ? Players.Max(p => p.ScoreCard.TotalFrames) : 0;
 
-    private string GetCumulativeScore(int frameIndex)
+    private static string GetCumulativeScore(ScoreCard card, int frameIndex)
     {
-        var frame = ScoreCard.Frames[frameIndex];
-        var score = ScoreCard.GetScore(frame);
+        var frame = card.Frames[frameIndex];
+        var score = card.GetScore(frame);
         return score?.ToString() ?? "";
     }
 
     /// <summary>
     /// Returns the text to display for a given roll in a frame.
     /// </summary>
-    private string GetRollDisplay(int frameIndex, int rollIndex)
+    private static string GetRollDisplay(ScoreCard card, int frameIndex, int rollIndex)
     {
-        var frame = ScoreCard.Frames[frameIndex];
+        var frame = card.Frames[frameIndex];
 
         if (rollIndex >= frame.Rolls.Count)
             return "";
@@ -101,9 +112,9 @@
     /// <summary>
     /// Returns a CSS class for special roll symbols (strike/spare) to allow distinct styling.
     /// </summary>
-    private string GetRollClass(int frameIndex, int rollIndex)
+    private static string GetRollClass(ScoreCard card, int frameIndex, int rollIndex)
     {
-        var display = GetRollDisplay(frameIndex, rollIndex);
+        var display = GetRollDisplay(card, frameIndex, rollIndex);
         return display switch
         {
             "X" => "strike",
