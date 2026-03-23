@@ -2,7 +2,7 @@
 
 
 
-The Challenge:
+## The Challenge:
 Create a program in your choice of language that can calculate the score of a full round of bowling, based on user inputs and the following rules:
 
 Strike:
@@ -25,11 +25,19 @@ If you leave the 10th frame open after two shots, the game is over and you do no
 How to Score: The score for the 10th frame is the total number of pins knocked down in the 10th frame.
 
 
-BowlingLogic
+## BowlingLogic
 This is where all the logic for scoring a bowling game is held. To start scoring a game, construct an instance of ScoreCard and begin using Roll() on it. Scoring can be accessed through GetScore() or GetFrameScore() on the same ScoreCard object. This class library also includes some helpful extension methods for your convenience in dealing with the scorecard.
 
 I made some use of AI to quickly refactor things as I was creating this portion, but it was very light and more a time saving measure than anything. All the architecture was designed by me, and all the implementation was written by me (or autofilled and then edited by me).
 
-BowlingLogic.Tests
-Ai generated tests for the BowlingLogic. From scratch in agentic mode with Claude Opus 4.6.
+## BowlingLogic.Tests
+Ai generated tests for the BowlingLogic. From scratch in agentic mode with Claude Opus 4.6. Further prompts to ensure full test coverage and adding some full games as a sample.
+
+## BowlingFrontend
+Quick templated blazor server application in .NET 10. Has a couple pages that use the BowlingLogic library to give functionality to users.
+### ScoreCalculator
+Simple calculator to show how a game would be calculated
+### GameScoring
+Allows for actual tracking of a bowling game, with multiple players each taking turns bowling.
+
 
