@@ -1,67 +1,118 @@
 @page "/score-calculator"
 @using BowlingFrontend.Components.GameDisplay
 @using BowlingLogic
+@using System.ComponentModel.DataAnnotations
 
 <PageTitle>Score Calculator</PageTitle>
 
 <h1>Score Calculator</h1>
 
-<ScoreCardDisplay ScoreCard="@scoreCard" />
+<div class="game-info">
+    <h3 class="game-info-header">
+        Game Info
+        <button class="btn ms-1" @onclick="@ToggleGameInfoExpanded">@(gameInfoExpanded ? "-" : "+")</button>
+    </h3>
 
-@if (scoreCard.IsGameComplete())
-{
-    <div class="game-status game-over">
-        Game Over! Final Score: <strong>@scoreCard.GetScore()</strong>
-    </div>
-}
-else
-{
-    <div class="game-status">
-        Frame @((scoreCard.GetCurrentFrameIndex() ?? 0) + 1) &mdash; Ball @GetCurrentBallNumber()
-    </div>
-}
+    @if (gameInfoExpanded)
+    {
+        <EditForm Model="@gameInfo" OnValidSubmit="@NewGame">
+            <DataAnnotationsValidator />
+            <div class="mt-2">
+                <label for="selectedTotalFrames">Total Frames:</label>
+                <InputNumber @bind-Value="gameInfo.selectedTotalFrames" id="selectedTotalFrames" />
+                <ValidationMessage For="@(() => gameInfo.selectedTotalFrames)" />
+            </div>
 
-@if (!scoreCard.IsGameComplete())
-{
-    <div class="pin-buttons">
-        @for (int i = 0; i <= GetRemainingPins(); i++)
-        {
-            var pins = i;
-            <button class="btn pin-btn" @onclick="() => HandleRoll(pins)">
-                @pins
-            </button>
-        }
-    </div>
-}
+            <div class="mt-2">
+                <label for="selectedPinCount">Pin Count:</label>
+                <InputNumber @bind-Value="gameInfo.selectedPinCount" id="selectedPinCount" />
+                <ValidationMessage For="@(() => gameInfo.selectedPinCount)" />
+            </div>
 
-<div class="new-game-section">
-    <button class="btn btn-outline-secondary" @onclick="NewGame">New Game</button>
+            <div class="mt-2">
+                <button class="btn btn-outline-secondary" type="submit">New Game</button>
+            </div>
+        </EditForm>
+    }
+    
 </div>
 
-@code {
-    private ScoreCard scoreCard = new();
+@if (scoreCard is not null)
+{
+    <ScoreCardDisplay ScoreCard="@scoreCard" />
 
-    private void HandleRoll(int pins)
+    @if (scoreCard.IsGameComplete())
     {
+        <div class="game-status game-over">
+            Game Over! Final Score: <strong>@scoreCard.GetScore()</strong>
+        </div>
+    }
+    else
+    {
+        <div class="game-status">
+            Frame @((scoreCard.GetCurrentFrameIndex() ?? 0) + 1) &mdash; Ball @GetCurrentBallNumber(scoreCard)
+        </div>
+    }
+
+    @if (!scoreCard.IsGameComplete())
+    {
+        <div class="pin-buttons">
+            @for (int i = 0; i <= GetRemainingPins(scoreCard); i++)
+            {
+                var pins = i;
+                <button class="btn pin-btn" @onclick="() => HandleRoll(pins)">
+                    @pins
+                </button>
+            }
+        </div>
+    }
+}
+
+@code {
+    ScoreCard? scoreCard;
+
+    void HandleRoll(int pins)
+    {
+        if (scoreCard is null) return;
+
         scoreCard.Roll(pins);
     }
 
-    private void NewGame()
-    {
-        scoreCard = new ScoreCard();
-    }
-
-    private int GetRemainingPins()
+    static int GetRemainingPins(ScoreCard scoreCard)
     {
         var frame = scoreCard.GetCurrentFrame();
         if (frame is null) return 0;
         return frame.PinCount - frame.GetCurrentRollPinsUsed();
     }
 
-    private int GetCurrentBallNumber()
+    static int GetCurrentBallNumber(ScoreCard scoreCard)
     {
         var frame = scoreCard.GetCurrentFrame();
         if (frame is null) return 0;
         return frame.Rolls.Count + 1;
+    }
+
+    class GameInfo
+    {
+        [Required]
+        [Range(1, 100, ErrorMessage = "Total frames must be 1-100")]
+        public int selectedTotalFrames { get; set; } = 10;
+        [Required]
+        [Range(1, 100, ErrorMessage = "Pin Count must be 1-100")]
+        public int selectedPinCount { get; set; } = 10;
+    }
+
+    GameInfo gameInfo = new();
+
+    bool gameInfoExpanded = true;
+
+    void ToggleGameInfoExpanded()
+    {
+        gameInfoExpanded = !gameInfoExpanded;
+    }
+
+    void NewGame()
+    {
+        scoreCard = new ScoreCard(gameInfo.selectedTotalFrames, gameInfo.selectedPinCount);
     }
 }

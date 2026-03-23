@@ -1,4 +1,12 @@
-﻿/* ===== Game Status ===== */
+﻿/* ===== Game Info Header ===== */
+
+.game-info-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ===== Game Status ===== */
 
 .game-status {
     text-align: center;
@@ -10,6 +18,12 @@
 .game-over {
     font-size: 1.4rem;
     color: #27ae60;
+}
+
+.game-info {
+    border: 1px solid gray;
+    padding: 1rem;
+    width:fit-content;
 }
 
 /* ===== Pin Buttons ===== */
@@ -44,13 +58,6 @@
         background-color: #1a252f;
         color: #fff;
     }
-
-/* ===== New Game ===== */
-
-.new-game-section {
-    text-align: center;
-    margin: 1.5rem 0;
-}
 
 /* ===== Responsive ===== */
 
