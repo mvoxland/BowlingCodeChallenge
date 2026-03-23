@@ -1,6 +1,10 @@
 ﻿@using BowlingLogic
 
-<div class="scorecard-container">
+<div class="scorecard-container @(IsActive ? "active" : "")">
+    @if (PlayerName is not null)
+    {
+        <div class="player-name">@PlayerName</div>
+    }
     <table class="scorecard">
         <tr class="frame-header-row">
             @for (int i = 0; i < ScoreCard.TotalFrames; i++)
@@ -48,6 +52,12 @@
 @code {
     [Parameter, EditorRequired]
     public ScoreCard ScoreCard { get; set; }
+
+    [Parameter]
+    public string? PlayerName { get; set; }
+
+    [Parameter]
+    public bool IsActive { get; set; }
 
     public EventCallback<int> Rolled { get; set; }
 

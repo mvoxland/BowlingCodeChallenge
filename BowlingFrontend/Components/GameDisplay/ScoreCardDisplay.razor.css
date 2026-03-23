@@ -3,7 +3,25 @@
 .scorecard-container {
     overflow-x: auto;
     margin: 1.5rem 0;
+    padding: 0.5rem;
+    border: 2px solid transparent;
+    border-radius: 6px;
     -webkit-overflow-scrolling: touch;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.scorecard-container.active {
+    border-color: #2980b9;
+    background-color: #f0f8ff;
+}
+
+/* ===== Player Name ===== */
+
+.player-name {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 0.4rem;
+    color: #2c3e50;
 }
 
 .scorecard {

@@ -1,0 +1,46 @@
+/* ===== Player Setup ===== */
+
+.player-input {
+    display: flex;
+    align-items: center;
+}
+
+.player-input input {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.9rem;
+}
+
+/* ===== Final Scores ===== */
+
+.final-scores {
+    max-width: 400px;
+    margin: 1rem auto;
+    text-align: center;
+}
+
+.final-score-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #eee;
+    font-size: 1.05rem;
+}
+
+.final-score-row.winner {
+    font-weight: 700;
+    color: #27ae60;
+    font-size: 1.2rem;
+}
+
+.player-score-name {
+    flex: 1;
+    text-align: left;
+}
+
+.player-score-value {
+    font-weight: 600;
+    min-width: 50px;
+    text-align: right;
+}

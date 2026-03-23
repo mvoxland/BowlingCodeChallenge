@@ -1,0 +1,215 @@
+@page "/game-scoring"
+@using BowlingFrontend.Components.GameDisplay
+@using BowlingLogic
+@using System.ComponentModel.DataAnnotations
+
+<PageTitle>Game Scoring</PageTitle>
+
+<h1>Game Scoring</h1>
+
+<div class="game-info">
+    <h3 class="game-info-header">
+        Game Setup
+        <button class="btn ms-1" @onclick="@ToggleGameInfoExpanded">@(gameInfoExpanded ? "-" : "+")</button>
+    </h3>
+
+    @if (gameInfoExpanded)
+    {
+        <EditForm Model="@gameInfo" OnValidSubmit="@StartGame">
+            <DataAnnotationsValidator />
+            <div class="mt-2">
+                <label for="selectedTotalFrames">Total Frames:</label>
+                <InputNumber @bind-Value="gameInfo.selectedTotalFrames" id="selectedTotalFrames" />
+                <ValidationMessage For="@(() => gameInfo.selectedTotalFrames)" />
+            </div>
+
+            <div class="mt-2">
+                <label for="selectedPinCount">Pin Count:</label>
+                <InputNumber @bind-Value="gameInfo.selectedPinCount" id="selectedPinCount" />
+                <ValidationMessage For="@(() => gameInfo.selectedPinCount)" />
+            </div>
+
+            <div class="mt-3">
+                <label><strong>Players</strong></label>
+                @for (int i = 0; i < gameInfo.PlayerNames.Count; i++)
+                {
+                    var index = i;
+                    <div class="player-input mt-1">
+                        <input type="text"
+                               value="@gameInfo.PlayerNames[index]"
+                               @onchange="(e) => gameInfo.PlayerNames[index] = e.Value?.ToString() ?? string.Empty"
+                               placeholder="Player @(index + 1) name" />
+
+                        @if (gameInfo.PlayerNames.Count > 2)
+                        {
+                            <button type="button" class="btn btn-outline-danger btn-sm ms-1" @onclick="() => RemovePlayer(index)">Remove</button>
+                        }
+                    </div>
+                }
+                <button type="button" class="btn btn-outline-secondary btn-sm mt-2" @onclick="AddPlayer">+ Add Player</button>
+            </div>
+
+            <div class="mt-2">
+                <button class="btn btn-outline-secondary" type="submit">Start Game</button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@if (players is not null)
+{
+    @foreach (var (index, player) in players.Index())
+    {
+        <ScoreCardDisplay ScoreCard="@player.ScoreCard"
+                          PlayerName="@player.Name"
+                          IsActive="@(index == activePlayerIndex && !IsGameOver)" />
+    }
+
+    @if (IsGameOver)
+    {
+        <div class="game-status game-over">
+            Game Over!
+        </div>
+        <div class="final-scores">
+            <h4>Final Scores</h4>
+            @foreach (var player in GetPlayersByScore())
+            {
+                <div class="final-score-row @(player == GetPlayersByScore().First() ? "winner" : "")">
+                    <span class="player-score-name">@player.Name</span>
+                    <span class="player-score-value">@player.ScoreCard.GetScore()</span>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        var activePlayer = players[activePlayerIndex];
+        var card = activePlayer.ScoreCard;
+        <div class="game-status">
+            <strong>@activePlayer.Name</strong> &mdash;
+            Frame @((card.GetCurrentFrameIndex() ?? 0) + 1),
+            Ball @GetCurrentBallNumber(card)
+        </div>
+
+        <div class="pin-buttons">
+            @for (int i = 0; i <= GetRemainingPins(card); i++)
+            {
+                var pins = i;
+                <button class="btn pin-btn" @onclick="() => HandleRoll(pins)">
+                    @pins
+                </button>
+            }
+        </div>
+    }
+}
+
+@code {
+    class PlayerScoreCard
+    {
+        public required string Name { get; set; }
+        public required ScoreCard ScoreCard { get; set; }
+    }
+
+    List<PlayerScoreCard>? players;
+    int activePlayerIndex;
+
+    bool IsGameOver => players?.All(p => p.ScoreCard.IsGameComplete()) ?? false;
+
+    void HandleRoll(int pins)
+    {
+        if (players is null) return;
+
+        var activePlayer = players[activePlayerIndex];
+        var card = activePlayer.ScoreCard;
+
+        var frameIndexBefore = card.GetCurrentFrameIndex();
+
+        card.Roll(pins);
+
+        var frameIndexAfter = card.GetCurrentFrameIndex();
+        bool frameCompleted = frameIndexAfter != frameIndexBefore;
+
+        if (frameCompleted)
+        {
+            AdvanceToNextPlayer();
+        }
+    }
+
+    void AdvanceToNextPlayer()
+    {
+        if (players is null) return;
+
+        for (int i = 1; i <= players.Count; i++)
+        {
+            int nextIndex = (activePlayerIndex + i) % players.Count;
+            if (!players[nextIndex].ScoreCard.IsGameComplete())
+            {
+                activePlayerIndex = nextIndex;
+                return;
+            }
+        }
+    }
+
+    List<PlayerScoreCard> GetPlayersByScore() => players?.OrderByDescending(p => p.ScoreCard.GetScore()).ToList() ?? [];
+
+    static int GetRemainingPins(ScoreCard scoreCard)
+    {
+        var frame = scoreCard.GetCurrentFrame();
+        if (frame is null) return 0;
+        return frame.PinCount - frame.GetCurrentRollPinsUsed();
+    }
+
+    static int GetCurrentBallNumber(ScoreCard scoreCard)
+    {
+        var frame = scoreCard.GetCurrentFrame();
+        if (frame is null) return 0;
+        return frame.Rolls.Count + 1;
+    }
+
+    // --- Game Setup ---
+
+    class GameInfo
+    {
+        [Required]
+        [Range(1, 100, ErrorMessage = "Total frames must be 1-100")]
+        public int selectedTotalFrames { get; set; } = 10;
+        [Required]
+        [Range(1, 100, ErrorMessage = "Pin Count must be 1-100")]
+        public int selectedPinCount { get; set; } = 10;
+
+        public List<string> PlayerNames { get; set; } = ["Player 1", "Player 2"];
+    }
+
+    GameInfo gameInfo = new();
+    bool gameInfoExpanded = true;
+
+    void ToggleGameInfoExpanded()
+    {
+        gameInfoExpanded = !gameInfoExpanded;
+    }
+
+    void AddPlayer()
+    {
+        gameInfo.PlayerNames.Add($"Player {gameInfo.PlayerNames.Count + 1}");
+    }
+
+    void RemovePlayer(int index)
+    {
+        if (gameInfo.PlayerNames.Count > 2)
+        {
+            gameInfo.PlayerNames.RemoveAt(index);
+        }
+    }
+
+    void StartGame()
+    {
+        activePlayerIndex = 0;
+        players = gameInfo.PlayerNames
+            .Select(name => new PlayerScoreCard
+            {
+                Name = name.Trim(),
+                ScoreCard = new ScoreCard(gameInfo.selectedTotalFrames, gameInfo.selectedPinCount)
+            })
+            .ToList();
+    }
+}
