@@ -70,7 +70,7 @@
 
     bool showNames => Players.Count > 1;
 
-    int maxFrames => Players.Count > 1 ? Players.Max(p => p.ScoreCard.TotalFrames) : 0;
+    int maxFrames => Players.Any() ? Players.Max(p => p.ScoreCard.TotalFrames) : 0;
 
     private static string GetCumulativeScore(ScoreCard card, int frameIndex)
     {
