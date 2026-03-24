@@ -313,6 +313,103 @@ public class EndScoreFrameTests
         Assert.Equal(0, frame.GetBonusRolls());
     }
 
+    // ── RemoveLastRoll ──────────────────────────────────────
+
+    [Fact]
+    public void RemoveLastRoll_NoRolls_Throws()
+    {
+        var frame = new EndScoreFrame();
+        Assert.Throws<InvalidOperationException>(() => frame.RemoveLastRoll());
+    }
+
+    [Fact]
+    public void RemoveLastRoll_Strike_ReopensFrame()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Empty(frame.Rolls);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_OpenFrame_ReopensFrame()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(3);
+        frame.AddRoll(4);
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Equal([3], frame.Rolls);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_ThirdRollAfterStrike_ReopensFrame()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10);
+        frame.AddRoll(5);
+        frame.AddRoll(3);
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Equal([10, 5], frame.Rolls);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_ThreeStrikes_RemovesThird()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10);
+        frame.AddRoll(10);
+        frame.AddRoll(10);
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Equal([10, 10], frame.Rolls);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_SpareBonus_RemovesBonus()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(6);
+        frame.AddRoll(4);
+        frame.AddRoll(8);
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Equal([6, 4], frame.Rolls);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_ThenAddDifferentRoll_WorksCorrectly()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10);
+        frame.AddRoll(10);
+        frame.AddRoll(5);
+        frame.RemoveLastRoll();
+        frame.AddRoll(10); // change last roll to a strike
+        Assert.True(frame.IsComplete);
+        Assert.Equal(30, frame.GetRawScore());
+    }
+
+    [Fact]
+    public void RemoveLastRoll_StrikeThenSpare_RemoveBonus_ThenReRoll()
+    {
+        var frame = new EndScoreFrame();
+        frame.AddRoll(10); // strike
+        frame.AddRoll(3);
+        frame.AddRoll(7);  // spare
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        frame.AddRoll(5);  // change to 3+5=8 open
+        Assert.True(frame.IsComplete);
+        Assert.Equal(18, frame.GetRawScore()); // 10 + 3 + 5
+    }
+
     // ── Gutter-Spare Pin Reset ────────────────────────────────
 
     [Fact]

@@ -234,6 +234,94 @@ public class ScoreFrameTests
         Assert.Equal(2, frame.MaxRolls);
     }
 
+    // ── RemoveLastRoll ──────────────────────────────────────
+
+    [Fact]
+    public void RemoveLastRoll_NoRolls_Throws()
+    {
+        var frame = new ScoreFrame();
+        Assert.Throws<InvalidOperationException>(() => frame.RemoveLastRoll());
+    }
+
+    [Fact]
+    public void RemoveLastRoll_OneRoll_RemovesIt()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(5);
+        frame.RemoveLastRoll();
+        Assert.Empty(frame.Rolls);
+        Assert.False(frame.IsComplete);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_TwoRolls_RemovesSecond()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(3);
+        frame.AddRoll(4);
+        frame.RemoveLastRoll();
+        Assert.Equal([3], frame.Rolls);
+        Assert.False(frame.IsComplete);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_Strike_ReopensFrame()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(10);
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Empty(frame.Rolls);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_Spare_ReopensFrame()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(7);
+        frame.AddRoll(3);
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Equal([7], frame.Rolls);
+    }
+
+    [Fact]
+    public void RemoveLastRoll_ThenAddRoll_WorksCorrectly()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(6);
+        frame.AddRoll(2);
+        frame.RemoveLastRoll();
+        frame.AddRoll(4); // 6 + 4 = spare
+        Assert.True(frame.IsComplete);
+        Assert.Equal([6, 4], frame.Rolls);
+        Assert.Equal(10, frame.GetRawScore());
+    }
+
+    [Fact]
+    public void RemoveLastRoll_UpdatesRawScore()
+    {
+        var frame = new ScoreFrame();
+        frame.AddRoll(4);
+        frame.AddRoll(5);
+        Assert.Equal(9, frame.GetRawScore());
+        frame.RemoveLastRoll();
+        Assert.Equal(4, frame.GetRawScore());
+    }
+
+    [Fact]
+    public void RemoveLastRoll_CustomPinCount_WorksCorrectly()
+    {
+        var frame = new ScoreFrame(100);
+        frame.AddRoll(100); // strike
+        Assert.True(frame.IsComplete);
+        frame.RemoveLastRoll();
+        Assert.False(frame.IsComplete);
+        Assert.Empty(frame.Rolls);
+    }
+
     // ── Partial / Edge Scoring ────────────────────────────────
 
     [Fact]

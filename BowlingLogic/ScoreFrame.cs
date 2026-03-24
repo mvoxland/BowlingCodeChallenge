@@ -42,6 +42,16 @@ public class ScoreFrame
     }
 
     /// <summary>
+    /// Removes the last roll from the frame
+    /// </summary>
+    public void RemoveLastRoll()
+    {
+        if (Rolls.Count <= 0)
+            throw new InvalidOperationException("This frame has no rolls to remove.");
+        Rolls.RemoveAt(Rolls.Count - 1);
+    }
+
+    /// <summary>
     /// Returns the sum of pins knocked down in this frame (no bonuses).
     /// </summary>
     public int GetRawScore() => Rolls.Sum();

@@ -52,10 +52,7 @@
         <div class="game-status">
             Frame @((scoreCard.GetCurrentFrameIndex() ?? 0) + 1) &mdash; Ball @GetCurrentBallNumber(scoreCard)
         </div>
-    }
 
-    @if (!scoreCard.IsGameComplete())
-    {
         <div class="pin-buttons">
             @for (int i = 0; i <= GetRemainingPins(scoreCard); i++)
             {
@@ -64,6 +61,10 @@
                     @pins
                 </button>
             }
+        </div>
+
+        <div class="mt-2">
+            <button class="btn btn-outline-secondary" @onclick="@HandleUndo">Undo</button>
         </div>
     }
 }
@@ -76,6 +77,15 @@
         if (scoreCard is null) return;
 
         scoreCard.Roll(pins);
+    }
+
+    void HandleUndo()
+    {
+        if (scoreCard is null) return;
+
+        if (scoreCard.Frames.FirstOrDefault()?.Rolls.Any() != true) return;
+
+        scoreCard.UndoRoll();
     }
 
     static int GetRemainingPins(ScoreCard scoreCard)

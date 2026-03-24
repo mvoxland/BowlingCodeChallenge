@@ -581,6 +581,212 @@ public class ScoreCardTests
         Assert.Equal(25, card.GetScore());
     }
 
+    // ── UndoRoll ────────────────────────────────────────────
+
+    [Fact]
+    public void UndoRoll_NoRolls_Throws()
+    {
+        var card = new ScoreCard();
+        Assert.Throws<InvalidOperationException>(() => card.UndoRoll());
+    }
+
+    [Fact]
+    public void UndoRoll_SingleRoll_RestoresEmptyState()
+    {
+        var card = new ScoreCard();
+        card.Roll(5);
+        card.UndoRoll();
+        Assert.Equal(0, card.GetCurrentFrameIndex());
+        Assert.Empty(card.Frames[0].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_SecondRollInFrame_RestoresFirstRoll()
+    {
+        var card = new ScoreCard();
+        card.Roll(3);
+        card.Roll(4);
+        card.UndoRoll();
+        Assert.Equal(0, card.GetCurrentFrameIndex());
+        Assert.Equal([3], card.Frames[0].Rolls);
+        Assert.False(card.Frames[0].IsComplete);
+    }
+
+    [Fact]
+    public void UndoRoll_Strike_ReopensFrame()
+    {
+        var card = new ScoreCard();
+        card.Roll(10); // strike completes frame 0, advances to frame 1
+        Assert.Equal(1, card.GetCurrentFrameIndex());
+        card.UndoRoll();
+        Assert.Equal(0, card.GetCurrentFrameIndex());
+        Assert.Empty(card.Frames[0].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_AfterFrameComplete_ReturnsToThatFrame()
+    {
+        var card = new ScoreCard();
+        card.Roll(3);
+        card.Roll(4); // completes frame 0
+        card.Roll(5); // starts frame 1
+        card.UndoRoll(); // undoes the 5 in frame 1
+        Assert.Equal(1, card.GetCurrentFrameIndex());
+        Assert.Empty(card.Frames[1].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_FirstRollInSecondFrame_UndoesFromCompletedFrame()
+    {
+        var card = new ScoreCard();
+        card.Roll(3);
+        card.Roll(4); // completes frame 0
+        // No rolls in frame 1 yet; frame 0 is the last complete frame
+        card.UndoRoll();
+        Assert.Equal(0, card.GetCurrentFrameIndex());
+        Assert.Equal([3], card.Frames[0].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_ThenReRoll_WorksCorrectly()
+    {
+        var card = new ScoreCard();
+        card.Roll(3);
+        card.Roll(4);
+        card.UndoRoll();
+        card.Roll(7); // 3 + 7 = spare
+        Assert.True(card.Frames[0].IsComplete);
+        Assert.Equal(1, card.Frames[0].GetBonusRolls()); // spare
+    }
+
+    [Fact]
+    public void UndoRoll_PreservesScoring()
+    {
+        var card = new ScoreCard();
+        card.Roll(10); // frame 0: strike
+        card.Roll(3);
+        card.Roll(4);  // frame 1: open (3+4=7)
+        Assert.Equal(24, card.GetScore()); // 17 + 7
+        card.UndoRoll(); // undoes the 4 in frame 1
+        Assert.Equal(0, card.GetScore()); // frame 0 indeterminate, frame 1 incomplete
+    }
+
+    [Fact]
+    public void UndoRoll_MultipleUndos_WalksBackThroughFrames()
+    {
+        var card = new ScoreCard();
+        card.Roll(3);
+        card.Roll(4); // frame 0 complete
+        card.Roll(5);
+        card.Roll(2); // frame 1 complete
+        card.UndoRoll(); // undo 2 from frame 1
+        Assert.Equal([5], card.Frames[1].Rolls);
+        card.UndoRoll(); // undo 5 from frame 1
+        Assert.Empty(card.Frames[1].Rolls);
+        card.UndoRoll(); // undo 4 from frame 0 (now last complete)
+        Assert.Equal([3], card.Frames[0].Rolls);
+        card.UndoRoll(); // undo 3 from frame 0
+        Assert.Empty(card.Frames[0].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_CompleteGame_UndoesLastRoll()
+    {
+        var card = new ScoreCard();
+        RollRepeated(card, 0, 20);
+        Assert.True(card.IsGameComplete());
+        card.UndoRoll();
+        Assert.False(card.IsGameComplete());
+    }
+
+    [Fact]
+    public void UndoRoll_PerfectGame_UndoesLastStrike()
+    {
+        var card = new ScoreCard();
+        RollRepeated(card, 10, 12); // perfect game
+        Assert.True(card.IsGameComplete());
+        card.UndoRoll();
+        Assert.False(card.IsGameComplete());
+        Assert.Equal(9, card.GetCurrentFrameIndex());
+        Assert.Equal([10, 10], card.Frames[9].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_TenthFrameThirdRoll_ReopensFrame()
+    {
+        var card = new ScoreCard();
+        RollRepeated(card, 0, 18); // frames 0-8
+        card.Roll(10); // 10th frame: strike
+        card.Roll(7);
+        card.Roll(2);
+        Assert.True(card.IsGameComplete());
+        card.UndoRoll(); // undo the 2
+        Assert.False(card.IsGameComplete());
+        Assert.Equal([10, 7], card.Frames[9].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_TenthFrameSpare_UndoesBonusRoll()
+    {
+        var card = new ScoreCard();
+        RollRepeated(card, 0, 18);
+        card.Roll(6);
+        card.Roll(4); // spare
+        card.Roll(8); // bonus
+        Assert.True(card.IsGameComplete());
+        card.UndoRoll();
+        Assert.False(card.IsGameComplete());
+        Assert.Equal([6, 4], card.Frames[9].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_ConsecutiveStrikes_WalksBackCorrectly()
+    {
+        var card = new ScoreCard();
+        card.Roll(10); // frame 0
+        card.Roll(10); // frame 1
+        card.Roll(10); // frame 2
+        card.UndoRoll(); // undo frame 2's strike
+        Assert.Equal(2, card.GetCurrentFrameIndex());
+        Assert.Empty(card.Frames[2].Rolls);
+        card.UndoRoll(); // undo frame 1's strike
+        Assert.Equal(1, card.GetCurrentFrameIndex());
+        Assert.Empty(card.Frames[1].Rolls);
+    }
+
+    [Fact]
+    public void UndoRoll_ThenRollAgain_ScoresCorrectly()
+    {
+        var card = new ScoreCard();
+        // Frame 0: 3, 4 = 7 (open)
+        card.Roll(3);
+        card.Roll(4);
+        // Frame 1: start with 5
+        card.Roll(5);
+        card.Roll(2);
+        // Undo frame 1 second roll and re-roll
+        card.UndoRoll();
+        card.Roll(5); // 5 + 5 = spare
+        Assert.True(card.Frames[1].IsComplete);
+        Assert.Equal(1, card.Frames[1].GetBonusRolls());
+        // Continue game with frame 2
+        card.Roll(3);
+        card.Roll(0);
+        // Frame 1 spare score: 10 + 3 = 13
+        Assert.Equal(13, card.GetFrameScore(card.Frames[1]));
+        Assert.Equal(23, card.GetScore(card.Frames[2])); // 7 + 13 + 3
+    }
+
+    [Fact]
+    public void UndoRoll_NonStandardGame_Works()
+    {
+        var card = new ScoreCard(totalFrames: 5, pinCount: 100);
+        card.Roll(100); // strike in frame 0
+        card.UndoRoll();
+        Assert.Equal(0, card.GetCurrentFrameIndex());
+        Assert.Empty(card.Frames[0].Rolls);
+    }
+
     // ══════════════════════════════════════════════════════════
     // Full Game Walk-Throughs with Per-Frame Assertions
     // ══════════════════════════════════════════════════════════

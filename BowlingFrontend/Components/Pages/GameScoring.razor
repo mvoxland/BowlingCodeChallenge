@@ -96,6 +96,10 @@
                 </button>
             }
         </div>
+
+        <div class="mt-2">
+            <button class="btn btn-outline-secondary" @onclick="@HandleUndo">Undo</button>
+        </div>
     }
 }
 
@@ -125,6 +129,26 @@
         }
     }
 
+    void HandleUndo()
+    {
+        if (players is null) return;
+
+        if (players.FirstOrDefault()?.ScoreCard.Frames.FirstOrDefault()?.Rolls.Any() != true) return;
+
+        var activePlayer = players[activePlayerIndex];
+        var card = activePlayer.ScoreCard;
+
+        if (card.GetCurrentFrame()?.Rolls.Any() == false)
+        {
+            RegressToLastPlayer();
+        }
+
+        activePlayer = players[activePlayerIndex];
+        card = activePlayer.ScoreCard;
+
+        card.UndoRoll();
+    }
+
     void AdvanceToNextPlayer()
     {
         if (players is null) return;
@@ -135,6 +159,22 @@
             if (!players[nextIndex].ScoreCard.IsGameComplete())
             {
                 activePlayerIndex = nextIndex;
+                return;
+            }
+        }
+    }
+
+    void RegressToLastPlayer()
+    {
+        if (players is null) return;
+
+        for (int i = 1; i <= players.Count; i++)
+        {
+            int prevIndex = (activePlayerIndex - i + players.Count) % players.Count;
+        
+            if (!players[prevIndex].ScoreCard.IsGameComplete())
+            {
+                activePlayerIndex = prevIndex;
                 return;
             }
         }

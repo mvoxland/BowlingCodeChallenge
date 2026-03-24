@@ -42,11 +42,22 @@ public class ScoreCard
         var currentFrame = Frames.FirstOrDefault(f => !f.IsComplete);
 
         if(currentFrame is null)
-        {
             throw new InvalidOperationException("The game is already complete. No more rolls allowed.");
-        }
 
         currentFrame.AddRoll(pins);
+    }
+
+    /// <summary>
+    /// Undoes the most recent roll.
+    /// </summary>
+    public void UndoRoll()
+    {
+        var currentFrame = Frames.LastOrDefault(f => !f.IsComplete && f.Rolls.Count > 0) ?? Frames.LastOrDefault(f => f.IsComplete);
+
+        if (currentFrame is null)
+            throw new InvalidOperationException("The game has just started. There are no rolls to undo.");
+
+        currentFrame.RemoveLastRoll();
     }
 
     /// <summary>
