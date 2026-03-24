@@ -34,6 +34,11 @@ I made some use of AI to quickly refactor things as I was creating this portion,
 ## BowlingLogic.Tests
 Ai generated tests for the BowlingLogic. From scratch with Claude Opus 4.6. Further prompts to ensure full test coverage and adding some full games as a sample.
 
+This is worse than manually written tests in that it doesn't serve as documentation for developers of BowlingLogic. Also, since the tests check every little thing, even if it doesn't matter much realistically, future refactors may require modification or deletion of tests that are petty.
+
+This is better than manually written tests in that it has near 100% code coverage, and any changes are almost garunteed to be backwards compatible if all tests pass. Since this is such a lightweight library, testing is almost instant so there is no cost to running this many either.
+
+I chose to ai generate the tests (and then do a manual look-over) because of the massive time-saver that it was. Though sadly, the fact they are generated means i'm not demonstrating my test-writing abilities.
 
 ## BowlingFrontend
 Quick templated blazor server application in .NET 10. Has a couple pages that use the BowlingLogic library to give functionality to users.

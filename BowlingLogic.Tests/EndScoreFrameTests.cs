@@ -37,7 +37,7 @@ public class EndScoreFrameTests
         Assert.False(frame.IsComplete);
     }
 
-    // ── Completion: Strike ────────────────────────────────────
+    // ── Completion: ────────────────────────────────────
 
     [Fact]
     public void IsComplete_Strike_TwoMoreRolls_True()
@@ -67,8 +67,6 @@ public class EndScoreFrameTests
         frame.AddRoll(10);
         Assert.True(frame.IsComplete);
     }
-
-    // ── Completion: Spare ─────────────────────────────────────
 
     [Fact]
     public void IsComplete_Spare_OneMoreRoll_True()
@@ -175,16 +173,6 @@ public class EndScoreFrameTests
         frame.AddRoll(10);
         frame.AddRoll(10);
         Assert.Throws<InvalidOperationException>(() => frame.AddRoll(1));
-    }
-
-    // ── Bonus Rolls ───────────────────────────────────────────
-
-    [Fact]
-    public void GetBonusRolls_AlwaysReturns0()
-    {
-        var frame = new EndScoreFrame();
-        frame.AddRoll(10);
-        Assert.Equal(0, frame.GetBonusRolls());
     }
 
     // ── Raw Score ─────────────────────────────────────────────
@@ -416,9 +404,6 @@ public class EndScoreFrameTests
     public void TenthFrame_GutterSpare_PinResetCorrect()
     {
         // Rolls: 0, 10 (spare via gutter + 10), then bonus roll of any value.
-        // This exercises the pin-reset path in GetCurrentRollPinsUsed where
-        // totalUsed reaches PinCount (0+10=10) and resets to 0, allowing a
-        // full-pin bonus roll.
         var frame = new EndScoreFrame();
         frame.AddRoll(0);  // gutter
         frame.AddRoll(10); // spare (0+10=10), pins reset

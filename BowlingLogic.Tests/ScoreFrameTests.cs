@@ -70,22 +70,6 @@ public class ScoreFrameTests
     // ── Strike Behavior ─────────────────────────────────────────
 
     [Fact]
-    public void AllPinsFirstRoll_CompletesFrame()
-    {
-        var frame = new ScoreFrame();
-        frame.AddRoll(10);
-        Assert.True(frame.IsComplete);
-    }
-
-    [Fact]
-    public void AllPinsFirstRoll_CustomPinCount_CompletesFrame()
-    {
-        var frame = new ScoreFrame(100);
-        frame.AddRoll(100);
-        Assert.True(frame.IsComplete);
-    }
-
-    [Fact]
     public void PartialFirstRoll_DoesNotCompleteFrame()
     {
         var frame = new ScoreFrame();
@@ -223,17 +207,6 @@ public class ScoreFrameTests
         Assert.Equal(10, frame.Rolls[0]);
     }
 
-    // ── MaxRolls ──────────────────────────────────────────────
-
-    [Fact]
-    public void MaxRolls_IsAlways2()
-    {
-        var frame = new ScoreFrame();
-        Assert.Equal(2, frame.MaxRolls);
-        frame.AddRoll(3);
-        Assert.Equal(2, frame.MaxRolls);
-    }
-
     // ── RemoveLastRoll ──────────────────────────────────────
 
     [Fact]
@@ -330,16 +303,5 @@ public class ScoreFrameTests
         var frame = new ScoreFrame();
         frame.AddRoll(7);
         Assert.Equal(7, frame.GetRawScore());
-    }
-
-    [Fact]
-    public void AddRoll_GutterThenHit_Allowed()
-    {
-        var frame = new ScoreFrame();
-        frame.AddRoll(0);
-        frame.AddRoll(7);
-        Assert.Equal([0, 7], frame.Rolls);
-        Assert.Equal(7, frame.GetRawScore());
-        Assert.True(frame.IsComplete);
     }
 }
