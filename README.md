@@ -30,14 +30,16 @@ This is where all the logic for scoring a bowling game is held. To start scoring
 
 I made some use of AI to quickly refactor things as I was creating this portion, but it was very light and more a time saving measure than anything. All the architecture was designed by me, and all the implementation was written by me (or autofilled and then edited by me).
 
+
 ## BowlingLogic.Tests
 Ai generated tests for the BowlingLogic. From scratch with Claude Opus 4.6. Further prompts to ensure full test coverage and adding some full games as a sample.
 
+
 ## BowlingFrontend
 Quick templated blazor server application in .NET 10. Has a couple pages that use the BowlingLogic library to give functionality to users.
+
 ### ScoreCalculator
-Simple calculator to show how a game would be calculated
+Simple calculator to show how a game would be calculated. Single player, but with customizable game (# pins and # frames). Also supports undo action if user makes a mistake entering.
+
 ### GameScoring
-Allows for actual tracking of a bowling game, with multiple players each taking turns bowling.
-
-
+Allows for actual tracking of a bowling game, with multiple players each taking turns bowling. Also includes customizable game (# pins and # frames) and supports undo action if user makes a mistake entering.
